@@ -13,12 +13,33 @@ k.randomize()
 # imports
 import usefullFunk
 
+defaultfLayout=[
+    [ # default mode
+        ["`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "{backspace}"],
+        ["{tab}", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "[", "]", "\\", ],
+        ["{caps}", "a", "s", "d", "f", "g", "h", "j", "k", "l", ";", "'", "{enter}", ],
+        ["{shiftl}", "z", "x", "c", "v", "b", "n", "m", ",", ".", "/", "{shiftr}", ],
+        ["{next}", "{space}", "{accept}" ],
+        ],[ # shifted mode
+        ["~", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+", "{backspace}", ],
+        ["{tab}" ,"Q" ,"W" ,"E" ,"R" ,"T" ,"Y" ,"U" ,"I" ,"O" ,"P" ,"{" ,"}" ,"|", ],
+        ["{caps}", "A", "S", "D", "F", "G", "H", "J", "K", "L", ":", "\"", "{enter}", ],
+        ["{shiftl}", "Z", "X", "C", "V", "B", "N", "M", "<", ">", "?", "{shiftr}", ],
+        ["{next}", "{space}", "{accept}" ],
+    ],[ # capsed mode
+        ["`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "{backspace}", ],
+        ["{tab}", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]", "\\", ],
+        ["{caps}", "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "{enter}", ],
+        ["{shiftl}", "Z", "X", "C", "V", "B", "N", "M", ",", ".", "/", "{shiftr}", ],
+        ["{next}", "{space}", "{accept}" ],
+    ]
+]
 
 class KeyBoard():
     """
     This is the keyboard class to manage a keyboard and give him a grade
     """
-    def __init__(self, mode, keys=[]):
+    def __init__(self, mode, keys=defaultfLayout):
         self.mode = mode
         self.keyLayout = keys
         if self.mode == "azerty":
