@@ -53,10 +53,11 @@ def swap(l, posX, posY):
     """
     l[posX], l[posY] = l[posY], l[posX]
 
-def randomizeList(l):
+def randomizeList(l, seed=random.random()):
     """
     This randomize the list
     """
+    random.seed(seed)
     ll = len(l) - 1
     for x in range(ll):
         swap(l, x, random.randint(x+1, ll))
