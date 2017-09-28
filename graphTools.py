@@ -17,8 +17,10 @@ class Graph():
     def __init__(self, dim):
         self.dim = dim
         self.g   = []
+        self.parcour = []
         for x in range(dim):
             self.g.append([-1]*dim)
+        self.buildParcour()
 
     def addLink(self, p1, p2, val):
         """
@@ -26,14 +28,23 @@ class Graph():
         """
         self.g[p1][p2] = val
 
-    def getPath(self, p1, p2, prev=None):
+    def buildParcour(self):
         """
-        This fuction return (<l>, <p>) as:
-            l: is a lenght of the path to take
+        GOAL: fill in the self.parcour as a list of graph
+        list of graph for each letter as a starting point
+        """
+        self.parcour = [[([], -1) for x in range(self.dim)]\
+                                    for y in range(self.dim)]
+
+    def getPath(self, p1, p2):
+        """
+        <p1> and <p2> lettters ID
+        This fuction return (<p>, <l>) as:
             p: is the list of points
-        if no route is found, return (-1, [])
+            l: is a lenght of the path to take
+        if no route is found, return ([], -1)
         """
-        pass
+        return self.parcour[p1][p1][p2]
 
     def toDot(self, name="my_graph"):
         """
@@ -46,22 +57,3 @@ class Graph():
                 if self.g[x][y] != -1:
                     res += "{} -> {};\n".format(x, y)
         return res + "}"
-
-
-    def getPathRec(self, pathL, path, cur, end):
-        """
-        pathL: path lenght
-        path: list of points for this path
-        curr: current point'd ID
-        end: ID of the end point
-        """
-        if cur == end:
-            return (pathL, path)
-        else:
-            res = []
-            for tries in range(len(self.g[cur])):
-                if self.g[cur][tries] != -1\
-                    and tries != cur  #don't take care of loop back
-
-                    res.append(self.getPathRec(pathL+self.g[cur][tries],
-                        path.append(tries), tries, end))
