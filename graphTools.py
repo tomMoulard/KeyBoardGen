@@ -35,6 +35,19 @@ class Graph():
         """
         pass
 
+    def toDot(self, name="my_graph"):
+        """
+        This function transphorm the graph into DOT format
+        It is usefull to print it with Graphviz
+        """
+        res = "digraph " + name + "{\n"
+        for y in range(self.dim):
+            for x in range(self.dim):
+                if self.g[x][y] != -1:
+                    res += "{} -> {};\n".format(x, y)
+        return res + "}"
+
+
     def getPathRec(self, pathL, path, cur, end):
         """
         pathL: path lenght
