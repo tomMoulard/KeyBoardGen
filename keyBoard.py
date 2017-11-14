@@ -174,7 +174,6 @@ class KeyBoard():
         else:
             return -1
 
-
     def toGraph(self):
         """
         This function has the purpose to full in the self.graph property

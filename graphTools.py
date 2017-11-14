@@ -35,6 +35,30 @@ class Graph():
         """
         self.parcour = [[([], -1) for x in range(self.dim)]\
                                     for y in range(self.dim)]
+        for z in range(self.dim): #For each letters
+            this = [[([], -1, False) for x in range(self.dim)] for y in range(self.dim)]
+            #[] -> Path, -1 -> Weight, False -> Has already been seen
+            for y in range(self.dim):
+                currentID = -1
+                if this[0] == [([], -1, False)] * self.dim:
+                    currentID = 0
+                else:
+                    MIN = (float('inf'), -1)
+                    for ID in range(self.dim):
+                        for x in range(self.dim):
+                            if not this[ID][x][2] and\
+                               this[ID][x][1] != -1 and\
+                               this[ID][x][1] < MIN[0]:
+                                MIN = (this[ID][x][1], x)
+                    currentID = MIN[1]
+                #Get new weights
+                for x in range(self.dim):
+                    if not this[currentID][x][2]: #Not visited yet
+                        prev = this[currentID][currentID][1] + self.g[currentID][x]
+                        if this[currentID][x][1] != -1:
+                            this[currentID][x] = this[currentID][x] if this[currentID][x][1] < prev else (this[currentID][currentID][0] + [x], prev, False)
+                        else:
+                            this[currentID][x] = (this[currentID][currentID][0] + [x], prev, False)
 
     def getPath(self, p1, p2):
         """
