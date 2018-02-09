@@ -111,6 +111,7 @@ class KeyBoard():
         elif self.mode == "qwerty":
             self.keyLayout = QWERTY
         elif self.mode == "random":
+            print("Taking a random one")
             self.keyLayout = DEFAULTLAYOUT
             self.randomize()
         elif self.mode == "set":
@@ -152,18 +153,20 @@ class KeyBoard():
         """
         This randomize a keyboard entirelly
         """
-        # self.keyLayout.usefullFunk.randomize()
         letters = []
-        # layout = []
-        # for mode in self.keyLayout:
-        #     # extract all letters to randomize but keeping the format
-        #     l = []
-        #     for letter in mode[1:]:
-        #         letters += letter
-        #         l.append(len(letter))
-        #     layout += l
-        # usefullFunk.randomizeList(letters, seed=self.seed)
-        # print(layout)
+        rowsl = [14, 14, 14, 13, 3]
+        self.keys = self.getAllLetters()
+        self.keyLayout = []
+        usefullFunk.randomizeList(self.keys)
+        pos, posR = 0, 0
+        for mode in range(3):
+            local = [[" # random mode"]]
+            for row in range(5):
+                local.append(self.keys[pos:pos+rowsl[posR]])
+                pos  += rowsl[posR]
+                posR += 1
+            posR = 0
+            self.keyLayout.append(local)
 
     def getIdLetter(self, l):
         """
@@ -183,8 +186,6 @@ class KeyBoard():
         self.graph = graphTools.Graph(len(self.keys))
 
         # now adding links
-        # in line first
-        # [[["a"]]]
         # modes letters
         for modes in self.keyLayout:
             for lines in modes[1:]:

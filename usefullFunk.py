@@ -61,3 +61,4 @@ def randomizeList(l, seed=random.random()):
     ll = len(l) - 1
     for x in range(ll):
         swap(l, x, random.randint(x+1, ll))
+        

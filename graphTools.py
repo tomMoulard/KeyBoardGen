@@ -20,7 +20,7 @@ class Graph():
         self.parcour = []
         for x in range(dim):
             self.g.append([-1]*dim)
-        self.buildParcour()
+        # self.buildParcour()
 
     def addLink(self, p1, p2, val):
         """
@@ -51,6 +51,7 @@ class Graph():
                                this[ID][x][1] < MIN[0]:
                                 MIN = (this[ID][x][1], x)
                     currentID = MIN[1]
+                print("Picking ")
                 #Get new weights
                 for x in range(self.dim):
                     if not this[currentID][x][2]: #Not visited yet

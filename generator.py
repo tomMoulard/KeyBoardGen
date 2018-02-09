@@ -11,10 +11,16 @@ import usefullFunk
 import keyBoard
 import genetik
 
-def main():
-    keyboard = keyBoard.KeyBoard("qwerty", seed=42)
+def main(args):
+    keyboard = keyBoard.KeyBoard("qwerty", seed=args.seed)
     keyboard.toGraph()
     print(keyboard.graph.toDot())
+    # print(keyboard.getAllLetters())
+    for x in range(len(keyboard.keys)):
+        print(x, keyboard.keys[x])
+    print(keyboard)
+    keyboard.randomize()
+    print(keyboard)
     
 def play(genNumber, popSize, fileName):
     pop = [keyBoard.KeyBoard("random", seed=42) for x in range(popSize)]
@@ -44,4 +50,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args.klf.readlines())
     print("len: {}, popsize:{}, seed: {}, verbose: {}".format(args.len, args.ps, args.seed, args.verbose))
-    # main()
+    main(args)
