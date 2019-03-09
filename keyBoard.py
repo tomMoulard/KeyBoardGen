@@ -12,7 +12,7 @@ k.randomize()
 
 # imports
 import usefullFunk
-
+from my_print import my_print
 # random
 import random
 
@@ -99,25 +99,27 @@ class KeyBoard():
         ]
     ]
     """
-    def __init__(self, mode, keys=[], seed=None):
+    def __init__(self, mode, keys=[], seed=None, debug=False):
         self.mode = mode
         self.keyLayout = keys
         self.seed = seed
         self.graph = None
         self.keys = []# This is a key list, and a id list
+        self.val = 0
+        self.debug = debug
         random.seed(self.seed)
         if self.mode == "azerty":  
             self.keyLayout = AZERTY
         elif self.mode == "qwerty":
             self.keyLayout = QWERTY
         elif self.mode == "random":
-            print("Taking a random one")
+            # print("Taking a random keyboard")
             self.keyLayout = DEFAULTLAYOUT
             self.randomize()
         elif self.mode == "set":
             self.keyLayout = keys
         else:
-            print("No default keyboard provided, taking a generic one")
+            my_print(debug, "No default keyboard provided, taking a generic one")
             self.keyLayout = DEFAULTLAYOUT
         self.keys = self.getAllLetters()
 
@@ -176,7 +178,11 @@ class KeyBoard():
             return self.keys.index(l)
         else:
             return -1
-
+    def valuate(self):
+        """
+        fill the val attibute of the class
+        """
+        self.val = 42;
     def toGraph(self):
         """
         This function has the purpose to full in the self.graph property
