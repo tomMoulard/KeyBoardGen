@@ -56,14 +56,12 @@ class Graph():
                 for x in range(self.dim):
                     if not this[currentID][x][2]: #Not visited yet
                         prev = this[currentID][currentID][1] + self.g[currentID][x]
-                        if this[currentID][x][1] != -1:
-                            this[currentID][x] = this[currentID][x] if this[currentID][x][1] < prev else (this[currentID][currentID][0] + [x], prev, False)
-                        else:
+                        if this[currentID][x][1] != -1 and this[currentID][x][1] < prev:
                             this[currentID][x] = (this[currentID][currentID][0] + [x], prev, False)
 
     def getPath(self, p1, p2):
         """
-        <p1> and <p2> lettters ID
+        <p1> and <p2> letters ID
         This fuction return (<p>, <l>) as:
             p: is the list of points
             l: is a lenght of the path to take
