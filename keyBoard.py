@@ -16,7 +16,7 @@ import usefullFunk
 # random
 import random
 
-DEFAULTLAYOUT = [# some fixing TODO
+DEFAULTLAYOUT = [
     [
         [" # default mode"],
         ["`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "{backspace}"],
@@ -42,7 +42,7 @@ DEFAULTLAYOUT = [# some fixing TODO
     ]
 ]
 QWERTY = DEFAULTLAYOUT
-
+"""
 AZERTY = [
     [
         [" # default mode"],
@@ -67,7 +67,7 @@ AZERTY = [
         ["{next}", "{space}", "{alt-gr}" ],
     ]
 ]
-
+"""
 class KeyBoard():
     """
     This is the keyboard class to manage a keyboard and give him a grade
@@ -120,7 +120,7 @@ class KeyBoard():
             print("No default keyboard provided, taking a generic one")
             self.keyLayout = DEFAULTLAYOUT
         self.keys = self.getAllLetters()
-    
+
     def __str__(self):
         """
         Is the function that return a str value of the keyboard
