@@ -7,9 +7,7 @@ This is all the function to manage the genetic algo
 """
 
 def sortpop(pop, first, last):
-    """
-    Sort the pop array using QuickSort
-    """
+    """Sort the pop array using QuickSort"""
     if first < last:
         sp = partition(pop, first, last)
         sortpop(pop, first, sp - 1)
@@ -33,7 +31,7 @@ def partition(pop, first, last):
     return right
 
 def evolve(pop, fileName):
-	"""
-	modify the pop to evolve toward a better score to type the <fileName> file
-	"""
-	pass
+    """
+    modify the pop to evolve toward a better score to type the <fileName> file
+    """
+    pass
