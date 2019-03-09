@@ -1,8 +1,12 @@
 FILE=test.klf
 PICT=tmp.png
+BIN=./generator.py
 
 all:
-	./generator.py $(FILE)
+	$(BIN) $(FILE) $(ARGS)
+
+help:
+	$(BIN) --help
 
 png:
-	./generator.py --show-dot $(FILE) | tail -n+3 | dot -Tpng -o $(PICT)
+	$(BIN) --show-dot $(FILE) | tail -n+3 | dot -Tpng -o $(PICT)
