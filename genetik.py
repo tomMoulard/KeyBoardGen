@@ -6,7 +6,7 @@ Created on tue nov 14 10:00:00 2017
 This is all the function to manage the genetic algo
 """
 
-def sortpop(pop, first, last):
+def sortPop(pop, first, last):
     """Sort the pop array using QuickSort"""
     if first < last:
         sp = partition(pop, first, last)
@@ -15,23 +15,26 @@ def sortpop(pop, first, last):
 
 def partition(pop, first, last):
     pivotVal = pop[first].val
-    left = firt + 1
+    left = first + 1
     right = last
     done = False
     while not done:
-        while left <= right and pop[left].val < pivotVal:
+        while left < len(pop) and left <= right and pop[left].val < pivotVal:
             left += 1
-        while pop[right].val >= pivotVal and right >= left:
+        while right < len(pop) and pop[right].val >= pivotVal and right >= left:
             right += 1
         if right < left:
             done = True
         else:
-            pop[left], pop[right] = pop[right], pop[left]
-    pop[first], pop[right] = pop[right], pop[first]
+            if left < len(pop) and right < len(pop):
+                pop[left], pop[right] = pop[right], pop[left]
+    if left < len(pop) and right < len(pop):
+        pop[first], pop[right] = pop[right], pop[first]
     return right
 
 def evolve(pop, fileName):
     """
     modify the pop to evolve toward a better score to type the <fileName> file
     """
+    print(filename)
     pass
