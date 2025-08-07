@@ -13,7 +13,14 @@ func max(a, b int) int {
 	if a > b {
 		return a
 	}
+	return b
+}
 
+// min returns the minimum of two integers.
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
 	return b
 }
 
@@ -158,13 +165,23 @@ func NewParallelEvolver(evaluator FitnessEvaluator, config Config) *ParallelEvol
 
 	var adaptiveMutator *AdaptiveMutator
 	if useDiversityMaintenance {
-		// Create adaptive mutator for diversity maintenance
-		adaptiveMutator = NewAdaptiveMutator(SwapMutation, config.MutationRate, config.MutationRate*3, 0.3)
+		// Create adaptive mutator for diversity maintenance with higher rates for large populations
+		baseRate := config.MutationRate
+		maxRate := config.MutationRate * 4  // More aggressive mutation for large populations
+		threshold := 0.25  // Higher threshold for large populations
+		adaptiveMutator = NewAdaptiveMutator(SwapMutation, baseRate, maxRate, threshold)
+	}
+
+	// Adjust tournament size for large populations to reduce selection pressure
+	adaptiveConfig := config
+	if useDiversityMaintenance && config.PopulationSize >= 200 {
+		// Use smaller tournament size for large populations to increase diversity
+		adaptiveConfig.TournamentSize = max(2, min(4, config.TournamentSize))
 	}
 
 	return &ParallelEvolver{
 		evaluator:               NewParallelEvaluator(evaluator, config.ParallelWorkers),
-		selector:                NewSelector(TournamentSelection, config),
+		selector:                NewSelector(TournamentSelection, adaptiveConfig),
 		crossover:               NewCrossover(OrderCrossover),
 		mutator:                 NewMutator(SwapMutation, config.MutationRate),
 		adaptiveMutator:         adaptiveMutator,
@@ -190,16 +207,28 @@ func (pe *ParallelEvolver) Evolve(ctx context.Context, population Population, co
 	// Create next generation
 	newPopulation := make(Population, 0, config.PopulationSize)
 
-	// Preserve elite individuals (but ensure some diversity)
-	elites := pe.selector.Select(population, config.ElitismCount)
-	if pe.useDiversityMaintenance && diversity < 0.2 {
-		// Low diversity: reduce elitism and add some random individuals
-		eliteCount := max(1, config.ElitismCount/2)
+	// Adaptive elitism based on population size and diversity
+	adaptiveElitismCount := config.ElitismCount
+	if pe.useDiversityMaintenance {
+		// For large populations, use percentage-based elitism (1-3% of population)
+		minElitism := max(1, config.PopulationSize/100)  // 1% minimum
+		maxElitism := max(3, config.PopulationSize/33)   // 3% maximum
+		adaptiveElitismCount = max(minElitism, min(maxElitism, config.ElitismCount))
+	}
+	
+	elites := pe.selector.Select(population, adaptiveElitismCount)
+	
+	// Only inject random individuals if diversity is critically low
+	if pe.useDiversityMaintenance && diversity < 0.1 {
+		// Very low diversity: replace some elites with evaluated random individuals
+		eliteCount := max(1, adaptiveElitismCount*2/3)  // Keep 2/3 of elites
 		elites = elites[:eliteCount]
 
-		// Add some random individuals to boost diversity
-		for range config.ElitismCount - eliteCount {
+		// Add some random individuals to boost diversity (but evaluate them first)
+		for range adaptiveElitismCount - eliteCount {
 			randomInd := NewRandomIndividual()
+			// Evaluate the random individual before adding to elites
+			randomInd.Fitness = pe.evaluator.evaluator.Evaluate(randomInd.Layout, randomInd.Charset, data)
 			elites = append(elites, randomInd)
 		}
 	}
@@ -356,7 +385,6 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 	charset := AlphabetOnly() // Default charset for now
 	
 	strategies := []InitializationStrategy{
-		RandomShuffle,
 		FrequencyBased,
 		HandBalance,
 		RowBalance,
@@ -364,8 +392,18 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 		AntiQWERTY,
 	}
 	
-	// Use different initialization strategies for population diversity
-	for i := range population {
+	// For large populations, use fewer diverse individuals to avoid local optima trapping
+	diverseRatio := 0.5  // 50% diverse individuals
+	if size >= 500 {
+		diverseRatio = 0.3  // Only 30% for very large populations
+	} else if size >= 200 {
+		diverseRatio = 0.4  // 40% for medium-large populations
+	}
+	
+	diverseCount := int(float64(size) * diverseRatio)
+	
+	// Create diverse individuals
+	for i := 0; i < diverseCount; i++ {
 		strategyIndex := i % len(strategies)
 		strategy := strategies[strategyIndex]
 		
@@ -375,11 +413,11 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 		} else {
 			population[i] = NewRandomIndividualWithStrategy(charset, strategy, nil)
 		}
-		
-		// Add some completely random individuals for extra diversity
-		if i >= len(strategies) && (i-len(strategies))%4 == 0 {
-			population[i] = NewRandomIndividual()
-		}
+	}
+	
+	// Fill the rest with random individuals for exploration
+	for i := diverseCount; i < size; i++ {
+		population[i] = NewRandomIndividual()
 	}
 	
 	return population
