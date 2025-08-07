@@ -1,0 +1,35 @@
+function calculateScore(x, y) {
+    if (x > 0 && y > 0) {
+        return Math.sqrt(x * x + y * y);
+    }
+    return 0.0;
+}
+
+let results = [];
+for (let i = 0; i < 10; i++) {
+    results.push(calculateScore(i, i + 1));
+}
+
+console.log("Results:", results.join(", "));
+
+// Object manipulation
+const config = {
+    "name": "test",
+    "values": [1, 2, 3],
+    "active": true
+};
+
+// Array operations with special chars
+arr = data.filter(item => item.id !== null)
+           .map(item => ({...item, score: item.value / 100}))
+           .sort((a, b) => a.score - b.score);
+
+// Regular expressions and strings
+const pattern = /^[a-zA-Z0-9_]+$/;
+const message = `Processing ${items.length} items...`;
+
+if (pattern.test(input)) {
+    process(input.trim().toLowerCase());
+} else {
+    throw new Error("Invalid input format!");
+}

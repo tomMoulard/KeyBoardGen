@@ -27,9 +27,10 @@ func TestFitnessEvaluatorNullCharacterRegression(t *testing.T) {
 	evaluator := NewFitnessEvaluator(geometry, weights)
 
 	// Test Case 1: The original bug - all null characters should get 0.0 fitness
-	var nullLayout [26]rune // All zero values = null characters
+	nullLayout := make([]rune, 26) // All zero values = null characters
+	charset := genetic.AlphabetOnly()
 
-	nullFitness := evaluator.Evaluate(nullLayout, keyloggerData)
+	nullFitness := evaluator.Evaluate(nullLayout, charset, keyloggerData)
 
 	if nullFitness != 0.0 {
 		t.Errorf("CRITICAL REGRESSION: Null layout got fitness %.10f, expected 0.0", nullFitness)
@@ -38,46 +39,50 @@ func TestFitnessEvaluatorNullCharacterRegression(t *testing.T) {
 
 	// Test Case 2: Partially null layout (another variant of the bug)
 	validIndividual := genetic.NewRandomIndividual()
-	corruptedLayout := validIndividual.Layout
+	corruptedLayout := make([]rune, len(validIndividual.Layout))
+	copy(corruptedLayout, validIndividual.Layout)
 	corruptedLayout[0] = 0 // Introduce null character
 	corruptedLayout[5] = 0 // Introduce another null character
 
-	corruptedFitness := evaluator.Evaluate(corruptedLayout, keyloggerData)
+	corruptedFitness := evaluator.Evaluate(corruptedLayout, charset, keyloggerData)
 	if corruptedFitness != 0.0 {
 		t.Errorf("REGRESSION: Partially null layout got fitness %.10f, expected 0.0", corruptedFitness)
 	}
 
 	// Test Case 3: Invalid characters should also get 0.0
-	invalidLayout := validIndividual.Layout
+	invalidLayout := make([]rune, len(validIndividual.Layout))
+	copy(invalidLayout, validIndividual.Layout)
 	invalidLayout[0] = 'A' // Uppercase is invalid
 	invalidLayout[1] = '1' // Number is invalid
 	invalidLayout[2] = ' ' // Space is invalid
 
-	invalidFitness := evaluator.Evaluate(invalidLayout, keyloggerData)
+	invalidFitness := evaluator.Evaluate(invalidLayout, charset, keyloggerData)
 	if invalidFitness != 0.0 {
 		t.Errorf("REGRESSION: Invalid character layout got fitness %.10f, expected 0.0", invalidFitness)
 	}
 
 	// Test Case 4: Duplicate characters should get 0.0
-	duplicateLayout := validIndividual.Layout
+	duplicateLayout := make([]rune, len(validIndividual.Layout))
+	copy(duplicateLayout, validIndividual.Layout)
 	duplicateLayout[1] = duplicateLayout[0] // Create duplicate
 
-	duplicateFitness := evaluator.Evaluate(duplicateLayout, keyloggerData)
+	duplicateFitness := evaluator.Evaluate(duplicateLayout, charset, keyloggerData)
 	if duplicateFitness != 0.0 {
 		t.Errorf("REGRESSION: Duplicate character layout got fitness %.10f, expected 0.0", duplicateFitness)
 	}
 
 	// Test Case 5: Missing characters should get 0.0
-	incompleteLayout := validIndividual.Layout
+	incompleteLayout := make([]rune, len(validIndividual.Layout))
+	copy(incompleteLayout, validIndividual.Layout)
 	incompleteLayout[25] = incompleteLayout[24] // Remove 'z' by duplicating 'y'
 
-	incompleteFitness := evaluator.Evaluate(incompleteLayout, keyloggerData)
+	incompleteFitness := evaluator.Evaluate(incompleteLayout, charset, keyloggerData)
 	if incompleteFitness != 0.0 {
 		t.Errorf("REGRESSION: Incomplete layout got fitness %.10f, expected 0.0", incompleteFitness)
 	}
 
 	// Positive Test: Valid layout should get positive fitness
-	validFitness := evaluator.Evaluate(validIndividual.Layout, keyloggerData)
+	validFitness := evaluator.Evaluate(validIndividual.Layout, validIndividual.Charset, keyloggerData)
 	if validFitness <= 0.0 {
 		t.Errorf("Valid layout should get positive fitness, got %.10f", validFitness)
 	}
@@ -108,7 +113,7 @@ func TestFitnessConsistency(t *testing.T) {
 	var fitnessValues []float64
 
 	for range 10 {
-		fitness := evaluator.Evaluate(individual.Layout, keyloggerData)
+		fitness := evaluator.Evaluate(individual.Layout, individual.Charset, keyloggerData)
 		fitnessValues = append(fitnessValues, fitness)
 	}
 
@@ -152,7 +157,7 @@ func TestFitnessDiversity(t *testing.T) {
 
 	for i := range numLayouts {
 		individual := genetic.NewRandomIndividual()
-		fitnessScores[i] = evaluator.Evaluate(individual.Layout, keyloggerData)
+		fitnessScores[i] = evaluator.Evaluate(individual.Layout, individual.Charset, keyloggerData)
 	}
 
 	// Check that we have diversity in fitness scores
@@ -200,7 +205,7 @@ func TestQWERTYFitnessBaseline(t *testing.T) {
 		'z', 'x', 'c', 'v', 'b', 'n', 'm', // Bottom row
 	}
 
-	qwertyFitness := evaluator.Evaluate(qwerty, keyloggerData)
+	qwertyFitness := evaluator.EvaluateLegacy(qwerty, keyloggerData)
 
 	// QWERTY should get a reasonable positive fitness
 	if qwertyFitness <= 0.0 {
@@ -214,7 +219,7 @@ func TestQWERTYFitnessBaseline(t *testing.T) {
 
 	// Compare with a random layout
 	randomIndividual := genetic.NewRandomIndividual()
-	randomFitness := evaluator.Evaluate(randomIndividual.Layout, keyloggerData)
+	randomFitness := evaluator.Evaluate(randomIndividual.Layout, randomIndividual.Charset, keyloggerData)
 
 	t.Logf("QWERTY fitness: %.6f", qwertyFitness)
 	t.Logf("Random layout fitness: %.6f", randomFitness)

@@ -166,16 +166,21 @@ func TestMainApplicationLargeDataset(t *testing.T) {
 	if err := os.WriteFile(testInput, []byte(largeText), 0o644); err != nil {
 		t.Fatalf("Failed to create large test input: %v", err)
 	}
-	defer os.Remove(testInput)
+
+	t.Cleanup(func() {
+		_ = os.Remove(testInput)
+	})
 
 	testOutput := "large_test_output.json"
-	defer os.Remove(testOutput)
+
+	t.Cleanup(func() {
+		_ = os.Remove(testOutput)
+	})
 
 	// Run with default settings (should trigger adaptive configuration)
 	cmd := exec.Command("./keyboardgen_test",
 		"-input", testInput,
-		"-output", testOutput,
-		"-verbose")
+		"-output", testOutput)
 
 	// Set timeout for large dataset processing - handled by test timeout
 
@@ -224,6 +229,7 @@ func TestMainApplicationLargeDataset(t *testing.T) {
 func TestMainApplicationErrorHandling(t *testing.T) {
 	// Build the application
 	buildCmd := exec.Command("go", "build", "-o", "keyboardgen_test", "./cmd/keyboardgen")
+
 	err := buildCmd.Run()
 	if err != nil {
 		t.Fatalf("Failed to build application: %v", err)
@@ -246,6 +252,7 @@ func TestMainApplicationErrorHandling(t *testing.T) {
 
 	// Test 2: Empty input file
 	emptyFile := "empty_test.txt"
+
 	err = os.WriteFile(emptyFile, []byte(""), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create empty test file: %v", err)

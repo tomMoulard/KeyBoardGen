@@ -1,0 +1,213 @@
+version: "2"
+run:
+  timeout: 10m
+
+linters:
+  default: all
+  disable:
+    # deprecated
+    - wsl
+
+  settings:
+    godox:
+      keywords:
+        - FIXME
+        - WARN
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - structtag
+
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: "github.com/instana/testify"
+              desc: Should use "github.com/stretchr/testify/assert"
+            - pkg: "gotest.tools/assert"
+              desc: Should use "github.com/stretchr/testify/assert"
+
+    revive:
+      rules:
+        - name: add-constant
+          disabled: true
+        - name: argument-limit
+          disabled: true
+        - name: atomic
+        - name: banned-characters
+        - name: bare-return
+        - name: blank-imports
+        - name: bool-literal-in-expr
+        - name: call-to-gc
+        - name: cognitive-complexity
+          disabled: true
+        - name: comment-spacings
+        - name: comments-density
+        - name: confusing-naming
+        - name: confusing-results
+          disabled: true
+        - name: constant-logical-expr
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: cyclomatic
+        - name: datarace
+        - name: deep-exit
+          disabled: true
+        - name: defer
+        - name: dot-imports
+        - name: duplicated-imports
+        - name: early-return
+        - name: empty-block
+        - name: empty-lines
+        - name: enforce-map-style
+        - name: enforce-repeated-arg-type-style
+        - name: enforce-slice-style
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+          disabled: true
+        - name: file-header
+        - name: file-length-limit
+        - name: filename-format
+        - name: flag-parameter
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: function-result-limit
+          disabled: true
+        - name: get-return
+        - name: identical-branches
+        - name: if-return
+        - name: import-alias-naming
+          arguments:
+            - "^[a-z][a-zA-Z0-9]{0,}$"
+        - name: import-shadowing
+        - name: imports-blocklist
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: line-length-limit
+          disabled: true
+        - name: max-control-nesting
+        - name: max-public-structs
+          disabled: true
+        - name: modifies-parameter
+        - name: modifies-value-receiver
+        - name: nested-structs
+        - name: optimize-operands-order
+        - name: package-comments
+          disabled: true
+        - name: range
+        - name: range-val-address
+        - name: range-val-in-closure
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: redundant-import-alias
+        - name: string-format
+        - name: string-of-int
+        - name: struct-tag
+          disabled: true
+        - name: superfluous-else
+        - name: time-equal
+        - name: time-naming
+        - name: unchecked-type-assertion
+        - name: unconditional-recursion
+        - name: unexported-naming
+        - name: unexported-return
+        - name: unhandled-error
+        - name: unnecessary-stmt
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: unused-receiver
+        - name: use-any
+        - name: useless-break
+        - name: var-declaration
+        - name: var-naming
+        - name: waitgroup-by-value
+
+    misspell:
+      locale: US
+
+    tagalign:
+      strict: true
+      order:
+        - json
+        - path
+        - query
+        - doc
+        - minimum
+        - maximum
+        - example
+        - required
+        - default
+
+    varnamelen:
+      ignore-decls:
+        - w http.ResponseWriter
+        - r *http.Request
+        - i int
+
+    testifylint:
+      enable-all: true
+
+    gocritic:
+      enable-all: true
+      disabled-checks:
+        - appendCombine
+        - hugeParam
+        - rangeValCopy
+        - unlabelStmt
+        - unnamedResult
+      settings:
+        elseif:
+          skipBalanced: false
+        rangeExprCopy:
+            skipTestFuncs: false
+        truncateCmp:
+          skipArchDependent: false
+        underef:
+          skipRecvDeref: false
+
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+
+  exclusions:
+    warn-unused: true
+    # rules:
+      # - path: '(.+)_test.go'
+        # linters:
+          # - dupl
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
+
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: 'interface{}'
+          replacement: 'any'
+        - pattern: 'a[b:len(a)]'
+          replacement: 'a[b:]'
+    golines:
+      max-len: 200
+      tab-len: 4
+      shorten-comments: true
+      reformat-tags: false
+      chain-split-dots: false
+
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
+
+output:
+  show-stats: false

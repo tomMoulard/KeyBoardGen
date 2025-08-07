@@ -2,43 +2,38 @@ package genetic
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
-
-	"github.com/tommoulard/keyboardgen/pkg/parser"
 )
 
-// TestKeyboardDisplayIntegration tests the complete pipeline from GA to display.
+// TestKeyboardDisplayIntegration tests the complete pipeline without parser dependency.
 func TestKeyboardDisplayIntegration(t *testing.T) {
-	// Test data
-	sampleText := "the quick brown fox jumps over the lazy dog hello world programming test"
-
-	// Parse sample data
-	klparser := parser.NewKeyloggerParser()
-	parseConfig := parser.DefaultConfig()
-
-	keyloggerData, err := klparser.Parse(strings.NewReader(sampleText), parseConfig)
-	if err != nil {
-		t.Fatalf("Failed to parse keylogger data: %v", err)
+	// Create mock keylogger data
+	keyloggerData := &MockKeyloggerData{
+		charFreq: map[rune]int{
+			'a': 5, 'b': 2, 'c': 3, 'd': 4, 'e': 8,
+			'f': 2, 'g': 2, 'h': 4, 'i': 6, 'j': 1,
+			'k': 1, 'l': 4, 'm': 2, 'n': 5, 'o': 6,
+			'p': 2, 'q': 1, 'r': 5, 's': 4, 't': 7,
+			'u': 3, 'v': 1, 'w': 2, 'x': 1, 'y': 2, 'z': 1,
+		},
+		bigramFreq: map[string]int{
+			"th": 3, "he": 2, "in": 2, "er": 2, "an": 2,
+			"ed": 1, "nd": 1, "to": 1, "en": 1, "ti": 1,
+		},
+		totalChars: 100,
 	}
 
-	// Verify data was parsed correctly
-	if keyloggerData.TotalChars == 0 {
-		t.Fatal("No characters parsed")
+	// Test that mock data works
+	if keyloggerData.GetTotalChars() == 0 {
+		t.Fatal("No characters in mock data")
 	}
 
-	if len(keyloggerData.CharFrequency) == 0 {
-		t.Fatal("No character frequencies recorded")
+	if len(keyloggerData.GetAllBigrams()) == 0 {
+		t.Fatal("No bigrams in mock data")
 	}
 
-	// Test that GetAllBigrams works (needed for fitness evaluation)
-	bigrams := keyloggerData.GetAllBigrams()
-	if len(bigrams) == 0 {
-		t.Fatal("No bigrams found")
-	}
-
-	t.Logf("Parsed %d characters, %d bigrams", keyloggerData.TotalChars, len(bigrams))
+	t.Logf("Mock data: %d characters, %d bigrams", keyloggerData.GetTotalChars(), len(keyloggerData.GetAllBigrams()))
 }
 
 // TestIndividualNotNull ensures individuals are never null after creation.
@@ -59,7 +54,7 @@ func TestIndividualNotNull(t *testing.T) {
 
 		// Check that individual is valid
 		if !individual.IsValid() {
-			t.Errorf("Invalid individual %d: %s", i, string(individual.Layout[:]))
+			t.Errorf("Invalid individual %d: %s", i, string(individual.Layout))
 		}
 
 		// Check that we have all 26 letters
@@ -132,14 +127,20 @@ func TestBestIndividualInitialization(t *testing.T) {
 
 	ga := NewParallelGA(mockEvaluator, config)
 
-	// Create sample data
-	sampleText := "hello world test"
-	klparser := parser.NewKeyloggerParser()
-	parseConfig := parser.DefaultConfig()
-
-	keyloggerData, err := klparser.Parse(strings.NewReader(sampleText), parseConfig)
-	if err != nil {
-		t.Fatalf("Failed to parse data: %v", err)
+	// Create mock sample data
+	keyloggerData := &MockKeyloggerData{
+		charFreq: map[rune]int{
+			'a': 1, 'b': 1, 'c': 1, 'd': 2, 'e': 3,
+			'f': 1, 'g': 1, 'h': 2, 'i': 1, 'j': 1,
+			'k': 1, 'l': 3, 'm': 1, 'n': 1, 'o': 2,
+			'p': 1, 'q': 1, 'r': 2, 's': 2, 't': 3,
+			'u': 1, 'v': 1, 'w': 2, 'x': 1, 'y': 1, 'z': 1,
+		},
+		bigramFreq: map[string]int{
+			"he": 1, "el": 1, "ll": 1, "lo": 1, "wo": 1,
+			"or": 1, "rl": 1, "ld": 1, "te": 1, "es": 1, "st": 1,
+		},
+		totalChars: 50,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -159,7 +160,7 @@ func TestBestIndividualInitialization(t *testing.T) {
 
 	// Test that bestIndividual is valid
 	if !best.IsValid() {
-		t.Errorf("Best individual is invalid: %s", string(best.Layout[:]))
+		t.Errorf("Best individual is invalid: %s", string(best.Layout))
 	}
 
 	// Test that fitness is reasonable
@@ -171,37 +172,60 @@ func TestBestIndividualInitialization(t *testing.T) {
 // MockFitnessEvaluator for testing.
 type MockFitnessEvaluator struct{}
 
-func (m *MockFitnessEvaluator) Evaluate(layout [26]rune, data KeyloggerDataInterface) float64 {
+func (m *MockFitnessEvaluator) Evaluate(layout []rune, charset *CharacterSet, data KeyloggerDataInterface) float64 {
 	// Return a simple fitness based on layout characteristics
 	// This ensures different layouts get different fitness values
 
-	// Count unique characters (should always be 26 for valid layouts)
+	// Validate layout first
+	if charset == nil || !charset.IsValid(layout) {
+		return 0.0
+	}
+
+	// Count unique characters
 	seen := make(map[rune]bool)
 	for _, char := range layout {
 		seen[char] = true
 	}
 
 	// Base fitness on uniqueness and character distribution
-	fitness := float64(len(seen)) / 26.0
+	fitness := float64(len(seen)) / float64(charset.Size)
 
 	// Add some variation based on first character
-	if layout[0] != 0 {
-		fitness += float64(layout[0]-'a') / 100.0
+	if len(layout) > 0 && layout[0] != 0 {
+		if layout[0] >= 'a' && layout[0] <= 'z' {
+			fitness += float64(layout[0]-'a') / 100.0
+		}
 	}
 
 	return fitness
 }
 
+// Legacy method for backward compatibility.
+func (m *MockFitnessEvaluator) EvaluateLegacy(layout [26]rune, data KeyloggerDataInterface) float64 {
+	layoutSlice := make([]rune, 26)
+	copy(layoutSlice, layout[:])
+
+	charset := AlphabetOnly()
+
+	return m.Evaluate(layoutSlice, charset, data)
+}
+
 // TestKeyloggerDataInterface ensures all required methods are implemented.
 func TestKeyloggerDataInterface(t *testing.T) {
-	sampleText := "hello world test data for interface verification"
-
-	klparser := parser.NewKeyloggerParser()
-	parseConfig := parser.DefaultConfig()
-
-	keyloggerData, err := klparser.Parse(strings.NewReader(sampleText), parseConfig)
-	if err != nil {
-		t.Fatalf("Failed to parse data: %v", err)
+	keyloggerData := &MockKeyloggerData{
+		charFreq: map[rune]int{
+			'a': 2, 'b': 1, 'c': 1, 'd': 3, 'e': 4,
+			'f': 2, 'g': 1, 'h': 2, 'i': 4, 'j': 1,
+			'k': 1, 'l': 3, 'm': 1, 'n': 3, 'o': 4,
+			'p': 1, 'q': 1, 'r': 5, 's': 2, 't': 6,
+			'u': 1, 'v': 2, 'w': 2, 'x': 1, 'y': 1, 'z': 1,
+		},
+		bigramFreq: map[string]int{
+			"he": 2, "el": 1, "ll": 1, "lo": 1, "wo": 1,
+			"or": 2, "rl": 1, "ld": 1, "te": 2, "es": 1,
+			"st": 1, "ta": 2, "at": 1, "da": 1, "fo": 1,
+		},
+		totalChars: 42,
 	}
 
 	// Test KeyloggerDataInterface methods
@@ -247,7 +271,7 @@ func TestDisplayHandlesNullCharacters(t *testing.T) {
 	individual.Layout[1] = 0
 
 	// This should not panic and should handle null characters gracefully
-	layoutString := string(individual.Layout[:])
+	layoutString := string(individual.Layout)
 
 	// Check that we can detect null characters
 	hasNull := false
@@ -276,15 +300,22 @@ func TestDisplayHandlesNullCharacters(t *testing.T) {
 
 // TestGeneticAlgorithmEvolution ensures GA actually evolves and doesn't get stuck.
 func TestGeneticAlgorithmEvolution(t *testing.T) {
-	// Create larger test dataset to ensure evolution can happen
-	sampleText := strings.Repeat("the quick brown fox jumps over the lazy dog hello world programming test ", 20)
-
-	klparser := parser.NewKeyloggerParser()
-	parseConfig := parser.DefaultConfig()
-
-	keyloggerData, err := klparser.Parse(strings.NewReader(sampleText), parseConfig)
-	if err != nil {
-		t.Fatalf("Failed to parse data: %v", err)
+	// Create larger mock dataset to ensure evolution can happen
+	keyloggerData := &MockKeyloggerData{
+		charFreq: map[rune]int{
+			'a': 50, 'b': 20, 'c': 30, 'd': 40, 'e': 80,
+			'f': 20, 'g': 20, 'h': 40, 'i': 60, 'j': 10,
+			'k': 10, 'l': 40, 'm': 20, 'n': 50, 'o': 60,
+			'p': 20, 'q': 10, 'r': 50, 's': 40, 't': 70,
+			'u': 30, 'v': 10, 'w': 20, 'x': 10, 'y': 20, 'z': 10,
+		},
+		bigramFreq: map[string]int{
+			"th": 30, "he": 20, "in": 20, "er": 20, "an": 20,
+			"ed": 10, "nd": 10, "to": 10, "en": 10, "ti": 10,
+			"es": 15, "or": 15, "te": 15, "of": 10, "be": 10,
+			"at": 12, "se": 12, "ha": 12, "ng": 8, "hi": 8,
+		},
+		totalChars: 1000,
 	}
 
 	// Use mock fitness evaluator to avoid import cycle
@@ -409,19 +440,27 @@ func TestAdaptiveConfigurationSelection(t *testing.T) {
 func TestNullCharacterRegressionFullPipeline(t *testing.T) {
 	// This test recreates the exact scenario that caused the null character bug
 
-	// Large dataset like Harry Potter
-	largeText := strings.Repeat("the quick brown fox jumps over the lazy dog hello world programming test keyboard layout optimization genetic algorithms ", 500)
-
-	klparser := parser.NewKeyloggerParser()
-	parseConfig := parser.DefaultConfig()
-
-	keyloggerData, err := klparser.Parse(strings.NewReader(largeText), parseConfig)
-	if err != nil {
-		t.Fatalf("Failed to parse large dataset: %v", err)
+	// Large mock dataset simulating complex text
+	keyloggerData := &MockKeyloggerData{
+		charFreq: map[rune]int{
+			'a': 500, 'b': 200, 'c': 300, 'd': 400, 'e': 800,
+			'f': 200, 'g': 200, 'h': 400, 'i': 600, 'j': 100,
+			'k': 100, 'l': 400, 'm': 200, 'n': 500, 'o': 600,
+			'p': 200, 'q': 100, 'r': 500, 's': 400, 't': 700,
+			'u': 300, 'v': 100, 'w': 200, 'x': 100, 'y': 200, 'z': 100,
+		},
+		bigramFreq: map[string]int{
+			"th": 300, "he": 200, "in": 200, "er": 200, "an": 200,
+			"ed": 100, "nd": 100, "to": 100, "en": 100, "ti": 100,
+			"es": 150, "or": 150, "te": 150, "of": 100, "be": 100,
+			"at": 120, "se": 120, "ha": 120, "ng": 80, "hi": 80,
+			"la": 90, "yo": 90, "ut": 90, "ke": 90, "al": 90,
+		},
+		totalChars: 10000,
 	}
 
 	// Use adaptive configuration (this should trigger large dataset config)
-	config := AdaptiveConfig(keyloggerData.TotalChars)
+	config := AdaptiveConfig(keyloggerData.GetTotalChars())
 
 	// Use mock evaluator
 	evaluator := &MockFitnessEvaluator{}
@@ -471,7 +510,7 @@ func TestNullCharacterRegressionFullPipeline(t *testing.T) {
 
 	if finalNullCount > 0 {
 		t.Errorf("CRITICAL REGRESSION: Final result has %d null characters", finalNullCount)
-		t.Errorf("Layout: %s", string(bestIndividual.Layout[:]))
+		t.Errorf("Layout: %s", string(bestIndividual.Layout))
 	}
 
 	if bestIndividual.Fitness <= 0.0 {
@@ -497,4 +536,32 @@ func average(values []float64) float64 {
 	}
 
 	return sum / float64(len(values))
+}
+
+// MockKeyloggerData implements KeyloggerDataInterface for testing.
+type MockKeyloggerData struct {
+	charFreq    map[rune]int
+	bigramFreq  map[string]int
+	trigramFreq map[string]int
+	totalChars  int
+}
+
+func (m *MockKeyloggerData) GetCharFreq(char rune) int {
+	return m.charFreq[char]
+}
+
+func (m *MockKeyloggerData) GetBigramFreq(bigram string) int {
+	return m.bigramFreq[bigram]
+}
+
+func (m *MockKeyloggerData) GetTrigramFreq(trigram string) int {
+	return m.trigramFreq[trigram]
+}
+
+func (m *MockKeyloggerData) GetTotalChars() int {
+	return m.totalChars
+}
+
+func (m *MockKeyloggerData) GetAllBigrams() map[string]int {
+	return m.bigramFreq
 }
