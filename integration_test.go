@@ -120,7 +120,7 @@ func TestMainApplicationNullCharacterRegression(t *testing.T) {
 	}
 
 	// Test 7: Output should mention QWERTY comparison with actual fitness
-	if !strings.Contains(outputStr, "vs QWERTY") {
+	if !strings.Contains(outputStr, "QWERTY") || !strings.Contains(outputStr, "COMPARISON") {
 		t.Errorf("REGRESSION: Output should contain QWERTY comparison")
 	}
 
