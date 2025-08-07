@@ -39,7 +39,7 @@ example:
 	echo "the quick brown fox jumps over the lazy dog" > examples/sample.txt
 	echo "hello world programming test keyboard layout" >> examples/sample.txt
 	echo "genetic algorithms optimize keyboard layouts for typing efficiency" >> examples/sample.txt
-	go run ./cmd/keyboardgen/ -input examples/sample.txt -output examples/result.json -generations 10 -population 20
+	go run ./cmd/keyboardgen/ -input examples/sample.txt -output examples/result.json -generations 30 -population 80 -mutation 0.15 -elitism 2
 
 example-verbose:
 	mkdir -p examples
@@ -47,7 +47,7 @@ example-verbose:
 	echo "hello world programming test keyboard layout optimization" >> examples/sample.txt
 	echo "genetic algorithms can create efficient typing patterns" >> examples/sample.txt
 	echo "abcdefghijklmnopqrstuvwxyz" >> examples/sample.txt
-	go run ./cmd/keyboardgen/ -input examples/sample.txt -output examples/result.json -generations 15 -population 30 -verbose
+	go run ./cmd/keyboardgen/ -input examples/sample.txt -output examples/result.json -generations 50 -population 100 -mutation 0.15 -elitism 2 -verbose
 
 example-hp:
 	go run ./cmd/keyboardgen/ -input harrypotter.txt -output examples/result.json -verbose
@@ -56,7 +56,7 @@ example-programming:
 	mkdir -p examples
 	find . -type f -name '*.go' -exec cat {} \; > examples/programming.txt
 	find . -type f -name '*.md' -exec cat {} \; >> examples/programming.txt
-	go run ./cmd/keyboardgen/ -input examples/programming.txt -output examples/programming_result.json -generations 20 -population 50
+	go run ./cmd/keyboardgen/ -input examples/programming.txt -output examples/programming_result.json -generations 100 -population 200 -mutation 0.2 -elitism 3
 
 example-full-charset:
 	mkdir -p examples
@@ -69,4 +69,4 @@ example-full-charset:
 	echo "Special chars: !@#$$%^&*()_+-=[]{}|;':\",./<>?" >> examples/fullset.txt
 	echo "Numbers: 0123456789" >> examples/fullset.txt
 	echo "Mixed: Hello, World! Testing 123... Done." >> examples/fullset.txt
-	go run ./cmd/keyboardgen/ -input examples/fullset.txt -output examples/fullset_result.json -generations 25 -population 60
+	go run ./cmd/keyboardgen/ -input examples/fullset.txt -output examples/fullset_result.json -generations 75 -population 150 -mutation 0.18 -elitism 2

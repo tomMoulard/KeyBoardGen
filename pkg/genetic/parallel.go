@@ -2,8 +2,10 @@ package genetic
 
 import (
 	"context"
+	"math/rand"
 	"runtime"
 	"sync"
+	"time"
 )
 
 // max returns the maximum of two integers.
@@ -296,11 +298,11 @@ func (pe *ParallelEvolver) offspringWorker(ctx context.Context, wg *sync.WaitGro
 
 			// Apply crossover
 			var child Individual
-			if randFloat64() < config.CrossoverRate {
+			if rand.Float64() < config.CrossoverRate {
 				child = pe.crossover.Apply(parent1, parent2)
 			} else {
 				// No crossover - clone a parent
-				if randFloat64() < 0.5 {
+				if rand.Float64() < 0.5 {
 					child = parent1.Clone()
 				} else {
 					child = parent2.Clone()
@@ -356,6 +358,12 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 		population[i] = NewRandomIndividual()
 	}
 
+	// Evaluate initial population fitness
+	err := pga.evolver.evaluator.EvaluatePopulation(ctx, population, data)
+	if err != nil {
+		return Individual{}, err
+	}
+
 	var bestIndividual Individual
 
 	bestFitness := -1.0
@@ -386,6 +394,7 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 			} else if individual.Fitness > bestFitness {
 				bestFitness = individual.Fitness
 				bestIndividual = individual.Clone()
+				bestIndividual.Age = generation // Update age when we find a better individual
 			}
 		}
 
@@ -403,19 +412,9 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 	return bestIndividual, nil
 }
 
-// Simple random float64 generator (replace with crypto/rand for production).
-func randFloat64() float64 {
-	return float64(randInt63()) / float64(1<<63-1)
-}
-
-// Simple random int63 generator (replace with crypto/rand for production).
-var randState uint64 = 1
-
-func randInt63() int64 {
-	// Simple LCG for demonstration
-	randState = randState*1664525 + 1013904223
-
-	return int64(randState >> 1)
+// initRandom initializes random seed for parallel GA
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 // WorkerPool manages a pool of workers for various GA tasks.
