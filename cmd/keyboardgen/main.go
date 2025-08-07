@@ -316,27 +316,26 @@ func runGA(ctx context.Context, appConfig Config) error {
 	fmt.Printf("Best fitness: %.6f\n", bestIndividual.Fitness)
 	fmt.Printf("Total time: %v\n", time.Since(startTime).Round(time.Second))
 
-	// Display best layout with enhanced visualization
-	fmt.Println("\nOptimal keyboard layout:")
-
 	// Create display handler
 	kbDisplay := display.NewKeyboardDisplay()
 
+	// Show enhanced summary first
+	kbDisplay.PrintSummary(bestIndividual, keyloggerData, fitnessEvaluator)
+
 	// Basic layout display
+	fmt.Printf("\n\033[1;34mOPTIMIZED KEYBOARD LAYOUT:\033[0m\n")
 	kbDisplay.SetOptions(false, false, false)
 	kbDisplay.PrintLayout(bestIndividual, keyloggerData)
 
-	// Print detailed statistics
+	// Print comprehensive statistics
 	kbDisplay.PrintStatistics(bestIndividual, keyloggerData)
 
-	// Show heatmap and comparison if verbose
+	// Always show comparison with QWERTY
+	kbDisplay.PrintComparisonWithEvaluator(bestIndividual, keyloggerData, fitnessEvaluator)
+
+	// Show heatmap if verbose
 	if appConfig.Verbose {
 		kbDisplay.PrintHeatmap(bestIndividual, keyloggerData)
-		// Use the improved comparison with actual QWERTY fitness
-		kbDisplay.PrintComparisonWithEvaluator(bestIndividual, keyloggerData, fitnessEvaluator)
-	} else {
-		// Always show comparison, but with basic version for non-verbose
-		kbDisplay.PrintComparison(bestIndividual, keyloggerData)
 	}
 
 	// Save to file

@@ -1,3 +1,0 @@
-the quick brown fox jumps over the lazy dog
-hello world programming test keyboard layout
-genetic algorithms optimize keyboard layouts for typing efficiency

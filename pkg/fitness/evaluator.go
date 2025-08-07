@@ -44,21 +44,27 @@ type FitnessEvaluator struct {
 
 // FitnessWeights defines importance of different fitness components.
 type FitnessWeights struct {
-	FingerDistance   float64 `json:"finger_distance"`
-	HandAlternation  float64 `json:"hand_alternation"`
-	FingerBalance    float64 `json:"finger_balance"`
-	RowJumping       float64 `json:"row_jumping"`
-	BigramEfficiency float64 `json:"bigram_efficiency"`
+	FingerDistance     float64 `json:"finger_distance"`
+	HandAlternation    float64 `json:"hand_alternation"`
+	FingerBalance      float64 `json:"finger_balance"`
+	RowJumping         float64 `json:"row_jumping"`
+	BigramEfficiency   float64 `json:"bigram_efficiency"`
+	SameFingerBigrams  float64 `json:"same_finger_bigrams"`  // New: penalize SFBs heavily
+	LateralStretches   float64 `json:"lateral_stretches"`   // New: penalize LSBs
+	RollQuality        float64 `json:"roll_quality"`        // New: reward good rolls
 }
 
 // DefaultWeights returns balanced fitness weights.
 func DefaultWeights() FitnessWeights {
 	return FitnessWeights{
-		FingerDistance:   0.3,
-		HandAlternation:  0.2,
-		FingerBalance:    0.2,
-		RowJumping:       0.15,
-		BigramEfficiency: 0.15,
+		FingerDistance:    0.15,  // Reduced to make room for modern metrics
+		HandAlternation:   0.15,  // Reduced
+		FingerBalance:     0.15,  // Reduced
+		RowJumping:        0.1,   // Reduced
+		BigramEfficiency:  0.1,   // Reduced
+		SameFingerBigrams: 0.25,  // High weight - SFBs are very bad
+		LateralStretches:  0.05,  // Moderate weight for LSBs
+		RollQuality:       0.05,  // Moderate weight for rolls
 	}
 }
 
@@ -94,13 +100,21 @@ func (fe *FitnessEvaluator) Evaluate(layout []rune, charset *genetic.CharacterSe
 	balanceScore := fe.calculateFingerBalance(layout, charset, data, charToPos)
 	rowJumpScore := fe.calculateRowJumping(layout, charset, data, charToPos)
 	bigramScore := fe.calculateBigramEfficiency(layout, charset, data, charToPos)
+	
+	// New modern fitness components
+	sfbPenalty := fe.calculateSameFingerBigrams(layout, charset, data, charToPos)
+	lsbPenalty := fe.calculateLateralStretches(layout, charset, data, charToPos)
+	rollScore := fe.calculateRollQuality(layout, charset, data, charToPos)
 
 	// Weighted sum of all components (higher is better)
 	fitness := fe.weights.FingerDistance*distanceScore +
 		fe.weights.HandAlternation*alternationScore +
 		fe.weights.FingerBalance*balanceScore +
 		fe.weights.RowJumping*rowJumpScore +
-		fe.weights.BigramEfficiency*bigramScore
+		fe.weights.BigramEfficiency*bigramScore +
+		fe.weights.SameFingerBigrams*sfbPenalty +
+		fe.weights.LateralStretches*lsbPenalty +
+		fe.weights.RollQuality*rollScore
 
 	return fitness
 }
@@ -312,6 +326,170 @@ func (fe *FitnessEvaluator) EvaluateLegacy(layout [26]rune, data genetic.Keylogg
 	copy(layoutSlice, layout[:])
 
 	return fe.Evaluate(layoutSlice, genetic.AlphabetOnly(), data)
+}
+
+// calculateSameFingerBigrams heavily penalizes same finger bigrams (SFBs).
+func (fe *FitnessEvaluator) calculateSameFingerBigrams(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
+	sfbCount := 0
+	totalBigrams := 0
+
+	for bigram, freq := range data.GetAllBigrams() {
+		if len(bigram) != 2 {
+			continue
+		}
+
+		char1, char2 := rune(bigram[0]), rune(bigram[1])
+		pos1, exists1 := charToPos[char1]
+		pos2, exists2 := charToPos[char2]
+
+		// Skip bigrams with characters not in our layout
+		if !exists1 || !exists2 {
+			continue
+		}
+
+		finger1, ok1 := fe.geometry.FingerMap[pos1]
+		finger2, ok2 := fe.geometry.FingerMap[pos2]
+
+		if !ok1 || !ok2 {
+			continue
+		}
+
+		totalBigrams += freq
+
+		// Same finger bigram (SFB) detection
+		if finger1 == finger2 {
+			sfbCount += freq
+		}
+	}
+
+	if totalBigrams == 0 {
+		return 1.0 // Perfect score if no data
+	}
+
+	sfbRate := float64(sfbCount) / float64(totalBigrams)
+	
+	// Return inverted score (fewer SFBs = higher score)
+	return 1.0 - sfbRate
+}
+
+// calculateLateralStretches penalizes lateral stretch bigrams on index fingers.
+func (fe *FitnessEvaluator) calculateLateralStretches(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
+	lsbCount := 0
+	totalBigrams := 0
+
+	for bigram, freq := range data.GetAllBigrams() {
+		if len(bigram) != 2 {
+			continue
+		}
+
+		char1, char2 := rune(bigram[0]), rune(bigram[1])
+		pos1, exists1 := charToPos[char1]
+		pos2, exists2 := charToPos[char2]
+
+		// Skip bigrams with characters not in our layout
+		if !exists1 || !exists2 {
+			continue
+		}
+
+		finger1, ok1 := fe.geometry.FingerMap[pos1]
+		finger2, ok2 := fe.geometry.FingerMap[pos2]
+		coord1, ok3 := fe.geometry.KeyPositions[pos1]
+		coord2, ok4 := fe.geometry.KeyPositions[pos2]
+
+		if !ok1 || !ok2 || !ok3 || !ok4 {
+			continue
+		}
+
+		totalBigrams += freq
+
+		// Check for lateral stretch bigrams (index fingers stretching outward)
+		// Left index (finger 3) stretching left, or right index (finger 4) stretching right
+		isLSB := false
+		
+		if finger1 == 3 && finger2 == 3 { // Both on left index
+			// Check if positions are far apart horizontally on same row
+			if coord1[1] == coord2[1] && math.Abs(coord1[0]-coord2[0]) > 2.0 {
+				isLSB = true
+			}
+		} else if finger1 == 4 && finger2 == 4 { // Both on right index
+			// Check if positions are far apart horizontally on same row
+			if coord1[1] == coord2[1] && math.Abs(coord1[0]-coord2[0]) > 2.0 {
+				isLSB = true
+			}
+		}
+
+		if isLSB {
+			lsbCount += freq
+		}
+	}
+
+	if totalBigrams == 0 {
+		return 1.0 // Perfect score if no data
+	}
+
+	lsbRate := float64(lsbCount) / float64(totalBigrams)
+	
+	// Return inverted score (fewer LSBs = higher score)
+	return 1.0 - lsbRate
+}
+
+// calculateRollQuality rewards smooth rolling motions.
+func (fe *FitnessEvaluator) calculateRollQuality(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
+	rollScore := 0.0
+	totalBigrams := 0
+
+	for bigram, freq := range data.GetAllBigrams() {
+		if len(bigram) != 2 {
+			continue
+		}
+
+		char1, char2 := rune(bigram[0]), rune(bigram[1])
+		pos1, exists1 := charToPos[char1]
+		pos2, exists2 := charToPos[char2]
+
+		// Skip bigrams with characters not in our layout
+		if !exists1 || !exists2 {
+			continue
+		}
+
+		finger1, ok1 := fe.geometry.FingerMap[pos1]
+		finger2, ok2 := fe.geometry.FingerMap[pos2]
+		coord1, ok3 := fe.geometry.KeyPositions[pos1]
+		coord2, ok4 := fe.geometry.KeyPositions[pos2]
+
+		if !ok1 || !ok2 || !ok3 || !ok4 {
+			continue
+		}
+
+		totalBigrams += freq
+
+		// Check for rolling motion (same hand, adjacent fingers, same row)
+		sameHand := (finger1 < 4 && finger2 < 4) || (finger1 >= 4 && finger2 >= 4)
+		adjacentFingers := math.Abs(float64(finger1-finger2)) == 1
+		sameRow := math.Abs(coord1[1]-coord2[1]) < 0.3
+		
+		if sameHand && adjacentFingers && sameRow {
+			// Inward rolls are better than outward rolls
+			isInward := false
+			if finger1 < 4 && finger2 < 4 { // Left hand
+				isInward = finger1 < finger2 // Rolling from pinky toward index
+			} else if finger1 >= 4 && finger2 >= 4 { // Right hand
+				isInward = finger1 > finger2 // Rolling from index toward pinky
+			}
+			
+			if isInward {
+				rollScore += float64(freq) * 0.8 // Good inward roll
+			} else {
+				rollScore += float64(freq) * 0.4 // Okay outward roll
+			}
+		}
+	}
+
+	if totalBigrams == 0 {
+		return 0.0
+	}
+
+	return rollScore / float64(totalBigrams)
 }
 
 // rateBigramEfficiency rates how efficient a finger combination is.
