@@ -21,19 +21,20 @@ import (
 
 // Config holds application configuration.
 type Config struct {
-	InputFile      string  `json:"input_file"`
-	OutputFile     string  `json:"output_file"`
-	ConfigFile     string  `json:"config_file"`
-	CharacterSet   string  `json:"character_set"` // "alphabet", "alphanumeric", "programming", "full"
-	PopulationSize int     `json:"population_size"`
-	MaxGeneration  int     `json:"max_generation"`
-	MutationRate   float64 `json:"mutation_rate"`
-	CrossoverRate  float64 `json:"crossover_rate"`
-	ElitismCount   int     `json:"elitism_count"`
-	WorkerCount    int     `json:"worker_count"`
-	Verbose        bool    `json:"verbose"`
-	ShowProgress   bool    `json:"show_progress"`
-	SaveInterval   int     `json:"save_interval"`
+	InputFile         string  `json:"input_file"`
+	OutputFile        string  `json:"output_file"`
+	ConfigFile        string  `json:"config_file"`
+	CharacterSet      string  `json:"character_set"` // "alphabet", "alphanumeric", "programming", "full"
+	PopulationSize    int     `json:"population_size"`
+	MaxGeneration     int     `json:"max_generation"`
+	MutationRate      float64 `json:"mutation_rate"`
+	CrossoverRate     float64 `json:"crossover_rate"`
+	ElitismCount      int     `json:"elitism_count"`
+	WorkerCount       int     `json:"worker_count"`
+	Verbose           bool    `json:"verbose"`
+	ShowProgress      bool    `json:"show_progress"`
+	SaveInterval      int     `json:"save_interval"`
+	DiverseInit       bool    `json:"diverse_init"` // Use diverse initialization strategies
 }
 
 // DefaultAppConfig returns default application configuration.
@@ -52,6 +53,7 @@ func DefaultAppConfig() Config {
 		Verbose:        false,
 		ShowProgress:   true,
 		SaveInterval:   50,
+		DiverseInit:    true, // Enable by default for better evolution
 	}
 }
 
@@ -119,6 +121,7 @@ func parseFlags() Config {
 	flag.BoolVar(&config.Verbose, "verbose", config.Verbose, "Verbose output")
 	flag.BoolVar(&config.ShowProgress, "progress", config.ShowProgress, "Show progress")
 	flag.IntVar(&config.SaveInterval, "save-interval", config.SaveInterval, "Save best layout every N generations")
+	flag.BoolVar(&config.DiverseInit, "diverse-init", config.DiverseInit, "Use diverse initialization strategies for broader starting population")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "KeyBoardGen - Genetic Algorithm Keyboard Layout Optimizer\n\n")
@@ -289,7 +292,7 @@ func runGA(ctx context.Context, appConfig Config) error {
 	var lastSavedGeneration int
 
 	// Run genetic algorithm
-	bestIndividual, err := ga.Run(ctx, keyloggerData, func(generation int, best genetic.Individual) {
+	bestIndividual, err := ga.RunWithDiverseInit(ctx, keyloggerData, func(generation int, best genetic.Individual) {
 		if appConfig.ShowProgress {
 			elapsed := time.Since(startTime)
 			avgTime := elapsed / time.Duration(generation+1)
@@ -306,7 +309,7 @@ func runGA(ctx context.Context, appConfig Config) error {
 			saveLayout(best, fmt.Sprintf("%s.gen%d", appConfig.OutputFile, generation))
 			lastSavedGeneration = generation
 		}
-	})
+	}, appConfig.DiverseInit)
 	if err != nil {
 		return fmt.Errorf("genetic algorithm failed: %w", err)
 	}

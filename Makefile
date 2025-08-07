@@ -58,6 +58,24 @@ example-programming:
 	find . -type f -name '*.md' -exec cat {} \; >> examples/programming.txt
 	go run ./cmd/keyboardgen/ -input examples/programming.txt -output examples/programming_result.json -generations 100 -population 200 -mutation 0.2 -elitism 3
 
+example-diverse:
+	mkdir -p examples
+	echo "the quick brown fox jumps over the lazy dog" > examples/diverse_test.txt
+	echo "hello world programming test keyboard layout optimization" >> examples/diverse_test.txt
+	echo "genetic algorithms can create efficient typing patterns" >> examples/diverse_test.txt
+	echo "abcdefghijklmnopqrstuvwxyz" >> examples/diverse_test.txt
+	go run ./cmd/keyboardgen/ -input examples/diverse_test.txt -output examples/diverse_result.json -generations 30 -population 60 -mutation 0.25 -elitism 2 -diverse-init=true -verbose
+
+example-comparison:
+	mkdir -p examples
+	echo "testing keyboard layout optimization with different initialization strategies for genetic algorithms" > examples/comparison.txt
+	echo "the quick brown fox jumps over the lazy dog" >> examples/comparison.txt
+	echo "hello world programming genetic algorithm keyboard layout optimization testing" >> examples/comparison.txt
+	echo "Random initialization test:" >> examples/comparison_random.txt
+	go run ./cmd/keyboardgen/ -input examples/comparison.txt -output examples/random_init.json -generations 20 -population 30 -mutation 0.3 -elitism 1 -diverse-init=false
+	echo "Diverse initialization test:" >> examples/comparison_diverse.txt  
+	go run ./cmd/keyboardgen/ -input examples/comparison.txt -output examples/diverse_init.json -generations 20 -population 30 -mutation 0.3 -elitism 1 -diverse-init=true
+
 example-full-charset:
 	mkdir -p examples
 	echo "Programming with full character set support:" > examples/fullset.txt

@@ -350,12 +350,57 @@ func NewParallelGA(evaluator FitnessEvaluator, config Config) *ParallelGA {
 	}
 }
 
+// CreateDiversePopulation creates a population using multiple initialization strategies
+func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
+	population := make(Population, size)
+	charset := AlphabetOnly() // Default charset for now
+	
+	strategies := []InitializationStrategy{
+		RandomShuffle,
+		FrequencyBased,
+		HandBalance,
+		RowBalance,
+		CommonPatternsFirst,
+		AntiQWERTY,
+	}
+	
+	// Use different initialization strategies for population diversity
+	for i := range population {
+		strategyIndex := i % len(strategies)
+		strategy := strategies[strategyIndex]
+		
+		// Use data-aware strategies when data is available
+		if data != nil && (strategy == FrequencyBased || strategy == HandBalance || strategy == CommonPatternsFirst) {
+			population[i] = NewRandomIndividualWithStrategy(charset, strategy, data)
+		} else {
+			population[i] = NewRandomIndividualWithStrategy(charset, strategy, nil)
+		}
+		
+		// Add some completely random individuals for extra diversity
+		if i >= len(strategies) && (i-len(strategies))%4 == 0 {
+			population[i] = NewRandomIndividual()
+		}
+	}
+	
+	return population
+}
+
 // Run executes the genetic algorithm.
 func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, callback func(generation int, best Individual)) (Individual, error) {
+	return pga.RunWithDiverseInit(ctx, data, callback, false)
+}
+
+// RunWithDiverseInit executes the genetic algorithm with optional diverse initialization.
+func (pga *ParallelGA) RunWithDiverseInit(ctx context.Context, data KeyloggerDataInterface, callback func(generation int, best Individual), diverseInit bool) (Individual, error) {
 	// Initialize population
-	population := make(Population, pga.config.PopulationSize)
-	for i := range population {
-		population[i] = NewRandomIndividual()
+	var population Population
+	if diverseInit {
+		population = CreateDiversePopulation(pga.config.PopulationSize, data)
+	} else {
+		population = make(Population, pga.config.PopulationSize)
+		for i := range population {
+			population[i] = NewRandomIndividual()
+		}
 	}
 
 	// Evaluate initial population fitness
