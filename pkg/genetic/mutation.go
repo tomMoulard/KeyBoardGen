@@ -301,15 +301,47 @@ func CalculatePopulationDiversity(population Population) float64 {
 
 // calculateLayoutDistance computes distance between two keyboard layouts.
 func calculateLayoutDistance(ind1, ind2 Individual) float64 {
+	// Safety check for empty layouts
+	if len(ind1.Layout) == 0 || len(ind2.Layout) == 0 {
+		return 0.0
+	}
+	
+	// Use the minimum length to avoid index out of bounds
+	minLength := len(ind1.Layout)
+	if len(ind2.Layout) < minLength {
+		minLength = len(ind2.Layout)
+	}
+	
 	differences := 0
-
-	for i := range len(ind1.Layout) {
+	for i := 0; i < minLength; i++ {
 		if ind1.Layout[i] != ind2.Layout[i] {
 			differences++
 		}
 	}
+	
+	// Add penalty for different length layouts
+	lengthDiff := abs(len(ind1.Layout) - len(ind2.Layout))
+	differences += lengthDiff
 
-	return float64(differences) / float64(len(ind1.Layout))
+	// Use maximum length for normalization to avoid division by zero
+	maxLength := len(ind1.Layout)
+	if len(ind2.Layout) > maxLength {
+		maxLength = len(ind2.Layout)
+	}
+	
+	if maxLength == 0 {
+		return 0.0
+	}
+	
+	return float64(differences) / float64(maxLength)
+}
+
+// abs returns the absolute value of an integer.
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 // MultiMutator applies multiple mutation operators with different probabilities.
