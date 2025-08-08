@@ -257,27 +257,32 @@ func runGA(ctx context.Context, appConfig Config) error {
 	// Set up genetic algorithm with adaptive configuration
 	var gaConfig genetic.Config
 
-	// Use adaptive configuration if user hasn't specified custom parameters (excluding convergence settings)
-	// Allow adaptive config when only convergence parameters or generations are customized
-	isUsingDefaults := (appConfig.PopulationSize == 100 &&
-		appConfig.MutationRate == 0.1 && appConfig.CrossoverRate == 0.8 && appConfig.ElitismCount == 5)
+	// Use adaptive configuration if user hasn't specified custom genetic algorithm parameters
+	// Allow adaptive config when only population, generation, or convergence parameters are customized
+	isUsingDefaults := (appConfig.MutationRate == 0.1 && appConfig.CrossoverRate == 0.8 && appConfig.ElitismCount == 5)
 
 	if isUsingDefaults {
-		// User is using defaults (convergence/generation settings don't count), apply adaptive configuration
+		// User is using defaults for genetic parameters, apply adaptive configuration
 		gaConfig = genetic.AdaptiveConfig(keyloggerData.TotalChars)
 
-		// Override with user's convergence settings if provided
+		// Override with user's specific settings if provided
+		if appConfig.PopulationSize != 100 { // User specified custom population
+			gaConfig.PopulationSize = appConfig.PopulationSize
+		}
 		if appConfig.ConvergenceStops > 0 {
 			gaConfig.ConvergenceStops = appConfig.ConvergenceStops
 		}
 		if appConfig.ConvergenceTolerance != 0.000001 { // Non-default tolerance
 			gaConfig.ConvergenceTolerance = appConfig.ConvergenceTolerance
 		}
-		if appConfig.MaxGeneration == 0 { // User wants unlimited generations
-			gaConfig.MaxGenerations = 0
+		if appConfig.MaxGeneration != 1000 { // User specified non-default generations
+			gaConfig.MaxGenerations = appConfig.MaxGeneration
 		}
 
 		fmt.Printf("Using adaptive configuration for dataset size: %d characters\n", keyloggerData.TotalChars)
+		if appConfig.PopulationSize != 100 {
+			fmt.Printf("with custom population size: %d\n", appConfig.PopulationSize)
+		}
 		if appConfig.ConvergenceStops > 0 {
 			fmt.Printf("with convergence stopping after %d stagnant generations\n", appConfig.ConvergenceStops)
 		}

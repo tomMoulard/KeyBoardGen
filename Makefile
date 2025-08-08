@@ -50,7 +50,7 @@ example-verbose:
 	go run ./cmd/keyboardgen/ -input examples/sample.txt -output examples/result.json -generations 50 -population 100 -mutation 0.15 -elitism 2 -verbose
 
 example-hp:
-	go run ./cmd/keyboardgen/ -input harrypotter.txt -output examples/result.json -verbose
+	go run ./cmd/keyboardgen/ -input harrypotter.txt -output examples/result.json -verbose --convergence-stops 20 --generations 0
 
 example-programming:
 	mkdir -p examples
