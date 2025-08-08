@@ -187,6 +187,7 @@ func (kd *KeyboardDisplay) colorizeCell(char rune, freq, total int) string {
 func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data KeyloggerDataInterface) {
 	if data == nil {
 		fmt.Printf("Fitness: %.6f, Age: %d generations\n", individual.Fitness, individual.Age)
+
 		return
 	}
 
@@ -223,6 +224,7 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 
 	// Finger usage distribution with visual bars
 	fingerUsage := kd.calculateFingerUsage(individual, data)
+
 	maxUsage := 0
 	for _, usage := range fingerUsage {
 		if usage > maxUsage {
@@ -231,6 +233,7 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 	}
 
 	fmt.Printf("\n\033[1;35mFINGER WORKLOAD DISTRIBUTION:\033[0m\n")
+
 	fingers := []string{"L.Pinky", "L.Ring ", "L.Mid  ", "L.Index", "R.Index", "R.Mid  ", "R.Ring ", "R.Pinky"}
 
 	for i, usage := range fingerUsage {
@@ -246,6 +249,7 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 	lrBalance := float64(leftTotal) * 100.0 / float64(leftTotal+rightTotal)
 
 	fmt.Printf("\n   * Left/Right balance: %.1f%%/%.1f%%", lrBalance, 100-lrBalance)
+
 	if lrBalance >= 45 && lrBalance <= 55 {
 		fmt.Printf(" \033[1;32m[BALANCED]\033[0m\n")
 	} else {
@@ -254,8 +258,11 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 
 	// Row usage analysis
 	rowUsage := kd.calculateRowUsage(individual, data)
+
 	fmt.Printf("\n\033[1;34mROW USAGE DISTRIBUTION:\033[0m\n")
+
 	rows := []string{"Top   ", "Home  ", "Bottom"}
+
 	for i, usage := range rowUsage {
 		percent := float64(usage) * 100.0 / float64(data.GetTotalChars())
 		barLength := int(percent / 5) // Scale for 0-100%
@@ -273,6 +280,7 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 	keyFreqs := kd.getKeyFrequencies(individual, data)
 
 	fmt.Printf("\n\033[1;32mTOP 10 MOST USED KEYS:\033[0m\n")
+
 	for i := 0; i < 10 && i < len(keyFreqs); i++ {
 		kf := keyFreqs[i]
 		percent := float64(kf.freq) * 100.0 / float64(data.GetTotalChars())
@@ -282,10 +290,12 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 	}
 
 	fmt.Printf("\n\033[1;31mBOTTOM 5 LEAST USED KEYS:\033[0m\n")
+
 	startIdx := len(keyFreqs) - 5
 	if startIdx < 0 {
 		startIdx = 0
 	}
+
 	for i := startIdx; i < len(keyFreqs); i++ {
 		kf := keyFreqs[i]
 		percent := float64(kf.freq) * 100.0 / float64(data.GetTotalChars())
@@ -296,7 +306,7 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 
 	// Bigram efficiency analysis
 	kd.analyzeBigramEfficiency(individual, data)
-	
+
 	// Modern ergonomic analysis
 	kd.analyzeErgonomicMetrics(individual, data)
 }
@@ -318,6 +328,7 @@ func (kd *KeyboardDisplay) calculateHandAlternation(individual genetic.Individua
 				if char == char1 {
 					pos1 = i
 				}
+
 				if char == char2 {
 					pos2 = i
 				}
@@ -369,6 +380,7 @@ func (kd *KeyboardDisplay) calculateRowUsage(individual genetic.Individual, data
 		} else {
 			row = 2 // bottom row
 		}
+
 		rowUsage[row] += data.GetCharFreq(char)
 	}
 
@@ -404,8 +416,10 @@ func (kd *KeyboardDisplay) getKeyFrequencies(individual genetic.Individual, data
 
 // getKeyInfo returns row and finger information for a position.
 func (kd *KeyboardDisplay) getKeyInfo(pos int) (string, string) {
-	var row string
-	var finger string
+	var (
+		row    string
+		finger string
+	)
 
 	if pos <= 9 {
 		row = "Top"
@@ -443,6 +457,7 @@ func (kd *KeyboardDisplay) analyzeBigramEfficiency(individual genetic.Individual
 
 	// Get all bigrams and sort by frequency
 	bigrams := data.GetAllBigrams()
+
 	type bigramInfo struct {
 		bigram string
 		freq   int
@@ -459,6 +474,7 @@ func (kd *KeyboardDisplay) analyzeBigramEfficiency(individual genetic.Individual
 
 	// Analyze top 10 bigrams
 	fmt.Printf("   Top 10 bigrams and their efficiency:\n")
+
 	for i := 0; i < 10 && i < len(bigramList); i++ {
 		bigram := bigramList[i]
 		if len(bigram.bigram) == 2 {
@@ -484,6 +500,7 @@ func (kd *KeyboardDisplay) calculateBigramEfficiency(bigram string, individual g
 		if char == char1 {
 			pos1 = i
 		}
+
 		if char == char2 {
 			pos2 = i
 		}
@@ -515,8 +532,10 @@ func (kd *KeyboardDisplay) analyzeErgonomicMetrics(individual genetic.Individual
 
 	// Calculate SFBs
 	sfbData := kd.calculateSameFingerBigrams(individual, data)
+
 	fmt.Printf("\n\033[1;31mSAME FINGER BIGRAMS (SFBs):\033[0m\n")
 	fmt.Printf("   * Total SFBs: %d/%d bigrams (%.1f%%)\n", sfbData.count, sfbData.total, sfbData.rate*100)
+
 	if sfbData.rate < 0.02 {
 		fmt.Printf("   * \033[1;32m[EXCELLENT]\033[0m Very low SFB rate\n")
 	} else if sfbData.rate < 0.05 {
@@ -524,14 +543,17 @@ func (kd *KeyboardDisplay) analyzeErgonomicMetrics(individual genetic.Individual
 	} else {
 		fmt.Printf("   * \033[1;31m[POOR]\033[0m High SFB rate - uncomfortable typing\n")
 	}
+
 	if len(sfbData.examples) > 0 {
 		fmt.Printf("   * Worst SFBs: %v\n", sfbData.examples[:min(5, len(sfbData.examples))])
 	}
 
-	// Calculate LSBs  
+	// Calculate LSBs
 	lsbData := kd.calculateLateralStretches(individual, data)
+
 	fmt.Printf("\n\033[1;35mLATERAL STRETCH BIGRAMS (LSBs):\033[0m\n")
 	fmt.Printf("   * Total LSBs: %d/%d bigrams (%.1f%%)\n", lsbData.count, lsbData.total, lsbData.rate*100)
+
 	if lsbData.rate < 0.01 {
 		fmt.Printf("   * \033[1;32m[EXCELLENT]\033[0m Minimal lateral stretching\n")
 	} else if lsbData.rate < 0.03 {
@@ -539,16 +561,19 @@ func (kd *KeyboardDisplay) analyzeErgonomicMetrics(individual genetic.Individual
 	} else {
 		fmt.Printf("   * \033[1;31m[POOR]\033[0m High lateral stretching - strain on index fingers\n")
 	}
+
 	if len(lsbData.examples) > 0 {
 		fmt.Printf("   * LSB examples: %v\n", lsbData.examples[:min(3, len(lsbData.examples))])
 	}
 
 	// Calculate rolls
 	rollData := kd.calculateRollQuality(individual, data)
+
 	fmt.Printf("\n\033[1;34mROLL QUALITY:\033[0m\n")
 	fmt.Printf("   * Inward rolls: %d bigrams (%.1f%%) \033[1;32m[SMOOTH]\033[0m\n", rollData.inwardCount, rollData.inwardRate*100)
 	fmt.Printf("   * Outward rolls: %d bigrams (%.1f%%) \033[1;33m[OKAY]\033[0m\n", rollData.outwardCount, rollData.outwardRate*100)
 	fmt.Printf("   * Roll ratio: %.1f%% of same-hand bigrams are rolls\n", rollData.totalRollRate*100)
+
 	if rollData.totalRollRate > 0.3 {
 		fmt.Printf("   * \033[1;32m[EXCELLENT]\033[0m High roll frequency - smooth typing feel\n")
 	} else if rollData.totalRollRate > 0.15 {
@@ -558,7 +583,7 @@ func (kd *KeyboardDisplay) analyzeErgonomicMetrics(individual genetic.Individual
 	}
 }
 
-// Ergonomic data structures
+// Ergonomic data structures.
 type SFBData struct {
 	count    int
 	total    int
@@ -574,11 +599,11 @@ type LSBData struct {
 }
 
 type RollData struct {
-	inwardCount    int
-	outwardCount   int
-	inwardRate     float64
-	outwardRate    float64
-	totalRollRate  float64
+	inwardCount   int
+	outwardCount  int
+	inwardRate    float64
+	outwardRate   float64
+	totalRollRate float64
 }
 
 // calculateSameFingerBigrams analyzes SFB frequency and examples.
@@ -586,25 +611,26 @@ func (kd *KeyboardDisplay) calculateSameFingerBigrams(individual genetic.Individ
 	sfbCount := 0
 	totalBigrams := 0
 	examples := make([]string, 0)
-	
+
 	bigrams := data.GetAllBigrams()
 	for bigram, freq := range bigrams {
 		if len(bigram) == 2 {
 			totalBigrams += freq
 			if kd.isSameFingerBigram(bigram, individual) {
 				sfbCount += freq
+
 				if len(examples) < 10 { // Collect examples
 					examples = append(examples, bigram)
 				}
 			}
 		}
 	}
-	
+
 	rate := 0.0
 	if totalBigrams > 0 {
 		rate = float64(sfbCount) / float64(totalBigrams)
 	}
-	
+
 	return SFBData{
 		count:    sfbCount,
 		total:    totalBigrams,
@@ -618,25 +644,26 @@ func (kd *KeyboardDisplay) calculateLateralStretches(individual genetic.Individu
 	lsbCount := 0
 	totalBigrams := 0
 	examples := make([]string, 0)
-	
+
 	bigrams := data.GetAllBigrams()
 	for bigram, freq := range bigrams {
 		if len(bigram) == 2 {
 			totalBigrams += freq
 			if kd.isLateralStretchBigram(bigram, individual) {
 				lsbCount += freq
+
 				if len(examples) < 10 {
 					examples = append(examples, bigram)
 				}
 			}
 		}
 	}
-	
+
 	rate := 0.0
 	if totalBigrams > 0 {
 		rate = float64(lsbCount) / float64(totalBigrams)
 	}
-	
+
 	return LSBData{
 		count:    lsbCount,
 		total:    totalBigrams,
@@ -650,30 +677,32 @@ func (kd *KeyboardDisplay) calculateRollQuality(individual genetic.Individual, d
 	inwardCount := 0
 	outwardCount := 0
 	totalBigrams := 0
-	
+
 	bigrams := data.GetAllBigrams()
 	for bigram, freq := range bigrams {
 		if len(bigram) == 2 {
 			totalBigrams += freq
+
 			rollType := kd.getRollType(bigram, individual)
-			if rollType == "inward" {
+			switch rollType {
+			case "inward":
 				inwardCount += freq
-			} else if rollType == "outward" {
+			case "outward":
 				outwardCount += freq
 			}
 		}
 	}
-	
+
 	inwardRate := 0.0
 	outwardRate := 0.0
 	totalRollRate := 0.0
-	
+
 	if totalBigrams > 0 {
 		inwardRate = float64(inwardCount) / float64(totalBigrams)
 		outwardRate = float64(outwardCount) / float64(totalBigrams)
 		totalRollRate = float64(inwardCount+outwardCount) / float64(totalBigrams)
 	}
-	
+
 	return RollData{
 		inwardCount:   inwardCount,
 		outwardCount:  outwardCount,
@@ -683,24 +712,25 @@ func (kd *KeyboardDisplay) calculateRollQuality(individual genetic.Individual, d
 	}
 }
 
-// Helper functions for ergonomic analysis
+// Helper functions for ergonomic analysis.
 func (kd *KeyboardDisplay) isSameFingerBigram(bigram string, individual genetic.Individual) bool {
 	if len(bigram) != 2 {
 		return false
 	}
-	
+
 	char1, char2 := rune(bigram[0]), rune(bigram[1])
 	pos1, pos2 := -1, -1
-	
+
 	for i, char := range individual.Layout {
 		if char == char1 {
 			pos1 = i
 		}
+
 		if char == char2 {
 			pos2 = i
 		}
 	}
-	
+
 	return pos1 != -1 && pos2 != -1 && kd.isSameFinger(pos1, pos2)
 }
 
@@ -708,39 +738,42 @@ func (kd *KeyboardDisplay) isLateralStretchBigram(bigram string, individual gene
 	if len(bigram) != 2 {
 		return false
 	}
-	
+
 	char1, char2 := rune(bigram[0]), rune(bigram[1])
 	pos1, pos2 := -1, -1
-	
+
 	for i, char := range individual.Layout {
 		if char == char1 {
 			pos1 = i
 		}
+
 		if char == char2 {
 			pos2 = i
 		}
 	}
-	
+
 	if pos1 == -1 || pos2 == -1 {
 		return false
 	}
-	
+
 	// Check if both are on index fingers and far apart horizontally
 	finger1 := kd.getFingerForPos(pos1)
 	finger2 := kd.getFingerForPos(pos2)
-	
+
 	// Index fingers are 3 (left) and 4 (right)
 	if (finger1 == 3 && finger2 == 3) || (finger1 == 4 && finger2 == 4) {
 		// Check if on same row but far apart
 		row1 := kd.getRowForPos(pos1)
+
 		row2 := kd.getRowForPos(pos2)
 		if row1 == row2 {
 			col1 := kd.getColumnForPos(pos1)
 			col2 := kd.getColumnForPos(pos2)
+
 			return abs(col1-col2) > 2
 		}
 	}
-	
+
 	return false
 }
 
@@ -748,51 +781,54 @@ func (kd *KeyboardDisplay) getRollType(bigram string, individual genetic.Individ
 	if len(bigram) != 2 {
 		return "none"
 	}
-	
+
 	char1, char2 := rune(bigram[0]), rune(bigram[1])
 	pos1, pos2 := -1, -1
-	
+
 	for i, char := range individual.Layout {
 		if char == char1 {
 			pos1 = i
 		}
+
 		if char == char2 {
 			pos2 = i
 		}
 	}
-	
+
 	if pos1 == -1 || pos2 == -1 {
 		return "none"
 	}
-	
+
 	finger1 := kd.getFingerForPos(pos1)
 	finger2 := kd.getFingerForPos(pos2)
 	row1 := kd.getRowForPos(pos1)
 	row2 := kd.getRowForPos(pos2)
-	
+
 	// Check for roll: same hand, adjacent fingers, same row
 	sameHand := (finger1 < 4 && finger2 < 4) || (finger1 >= 4 && finger2 >= 4)
 	adjacentFingers := abs(finger1-finger2) == 1
 	sameRow := row1 == row2
-	
+
 	if sameHand && adjacentFingers && sameRow {
 		if finger1 < 4 && finger2 < 4 { // Left hand
 			if finger1 < finger2 {
 				return "inward" // Pinky to index
 			}
+
 			return "outward" // Index to pinky
 		} else if finger1 >= 4 && finger2 >= 4 { // Right hand
 			if finger1 > finger2 {
 				return "inward" // Index to pinky
 			}
+
 			return "outward" // Pinky to index
 		}
 	}
-	
+
 	return "none"
 }
 
-// Helper functions for position analysis
+// Helper functions for position analysis.
 func (kd *KeyboardDisplay) getFingerForPos(pos int) int {
 	fingerMap := map[int]int{
 		0: 0, 1: 1, 2: 2, 3: 3, 4: 3, 5: 4, 6: 4, 7: 5, 8: 6, 9: 7,
@@ -802,6 +838,7 @@ func (kd *KeyboardDisplay) getFingerForPos(pos int) int {
 	if finger, ok := fingerMap[pos]; ok {
 		return finger
 	}
+
 	return -1
 }
 
@@ -829,6 +866,7 @@ func abs(x int) int {
 	if x < 0 {
 		return -x
 	}
+
 	return x
 }
 
@@ -836,6 +874,7 @@ func min(a, b int) int {
 	if a < b {
 		return a
 	}
+
 	return b
 }
 
@@ -845,6 +884,7 @@ func (kd *KeyboardDisplay) isDifferentHands(pos1, pos2 int) bool {
 	// Positions 5-9, 15-18, 23-25 are right hand
 	leftHand1 := (pos1 <= 4) || (pos1 >= 10 && pos1 <= 14) || (pos1 >= 19 && pos1 <= 22)
 	leftHand2 := (pos2 <= 4) || (pos2 >= 10 && pos2 <= 14) || (pos2 >= 19 && pos2 <= 22)
+
 	return leftHand1 != leftHand2
 }
 
@@ -858,6 +898,7 @@ func (kd *KeyboardDisplay) isSameFinger(pos1, pos2 int) bool {
 
 	finger1, ok1 := fingerMap[pos1]
 	finger2, ok2 := fingerMap[pos2]
+
 	return ok1 && ok2 && finger1 == finger2
 }
 
@@ -891,6 +932,7 @@ func (kd *KeyboardDisplay) PrintComparisonWithEvaluator(individual genetic.Indiv
 	fmt.Printf("\n\033[1;36mFITNESS COMPARISON:\033[0m\n")
 	fmt.Printf("   * Optimized layout: %.6f\n", individual.Fitness)
 	fmt.Printf("   * QWERTY layout:    %.6f\n", qwertyFitness)
+
 	if improvementPercent > 0 {
 		fmt.Printf("   * Improvement:      \033[1;32m+%.1f%%\033[0m\n", improvementPercent)
 	} else {
@@ -946,6 +988,7 @@ func (kd *KeyboardDisplay) PrintComparisonWithEvaluator(individual genetic.Indiv
 	}
 
 	fmt.Printf("\n\033[1;37mOPTIMIZATION INSIGHTS:\033[0m\n")
+
 	if improvementPercent > 20 {
 		fmt.Printf("   * \033[1;32mEXCELLENT!\033[0m Your typing efficiency improved significantly.\n")
 	} else if improvementPercent > 10 {
@@ -957,6 +1000,7 @@ func (kd *KeyboardDisplay) PrintComparisonWithEvaluator(individual genetic.Indiv
 	}
 
 	fmt.Printf("   * Consider using this layout for %s typing tasks.\n", individual.Charset.Name)
+
 	if individual.Charset.Name != "alphabet" {
 		fmt.Printf("   * This layout is optimized for programming/special characters.\n")
 	}
@@ -983,6 +1027,7 @@ func (kd *KeyboardDisplay) printDetailedComparison(individual genetic.Individual
 	qwertyAltPercent := float64(qwertyAlternation) * 100.0 / float64(totalBigrams)
 
 	fmt.Printf("   Hand alternation:  %.1f%% vs %.1f%% (QWERTY)", optAltPercent, qwertyAltPercent)
+
 	if optAltPercent > qwertyAltPercent {
 		fmt.Printf(" \033[1;32m[BETTER]\033[0m\n")
 	} else {
@@ -997,6 +1042,7 @@ func (kd *KeyboardDisplay) printDetailedComparison(individual genetic.Individual
 	qwertyHomePercent := float64(qwertyRows[1]) * 100.0 / float64(data.GetTotalChars())
 
 	fmt.Printf("   Home row usage:    %.1f%% vs %.1f%% (QWERTY)", optHomePercent, qwertyHomePercent)
+
 	if optHomePercent > qwertyHomePercent {
 		fmt.Printf(" \033[1;32m[BETTER]\033[0m\n")
 	} else {
@@ -1012,6 +1058,7 @@ func (kd *KeyboardDisplay) printDetailedComparison(individual genetic.Individual
 	qwertyVariance := kd.calculateFingerVariance(qwertyFingers, data.GetTotalChars())
 
 	fmt.Printf("   Finger balance:    %.3f vs %.3f variance (QWERTY)", optVariance, qwertyVariance)
+
 	if optVariance < qwertyVariance {
 		fmt.Printf(" \033[1;32m[BETTER]\033[0m\n")
 	} else {
@@ -1031,6 +1078,7 @@ func (kd *KeyboardDisplay) printErgonomicComparison(individual genetic.Individua
 	qwertySFB := kd.calculateSameFingerBigrams(qwertyIndividual, data)
 
 	fmt.Printf("   Same Finger Bigrams: %.1f%% vs %.1f%% (QWERTY)", optSFB.rate*100, qwertySFB.rate*100)
+
 	if optSFB.rate < qwertySFB.rate {
 		improvement := (qwertySFB.rate - optSFB.rate) / qwertySFB.rate * 100
 		fmt.Printf(" \033[1;32m[%.1f%% BETTER]\033[0m\n", improvement)
@@ -1038,11 +1086,12 @@ func (kd *KeyboardDisplay) printErgonomicComparison(individual genetic.Individua
 		fmt.Printf(" \033[1;33m[WORSE]\033[0m\n")
 	}
 
-	// LSB comparison  
+	// LSB comparison
 	optLSB := kd.calculateLateralStretches(individual, data)
 	qwertyLSB := kd.calculateLateralStretches(qwertyIndividual, data)
 
 	fmt.Printf("   Lateral Stretches:   %.1f%% vs %.1f%% (QWERTY)", optLSB.rate*100, qwertyLSB.rate*100)
+
 	if optLSB.rate < qwertyLSB.rate {
 		improvement := (qwertyLSB.rate - optLSB.rate) / qwertyLSB.rate * 100
 		fmt.Printf(" \033[1;32m[%.1f%% BETTER]\033[0m\n", improvement)
@@ -1055,6 +1104,7 @@ func (kd *KeyboardDisplay) printErgonomicComparison(individual genetic.Individua
 	qwertyRoll := kd.calculateRollQuality(qwertyIndividual, data)
 
 	fmt.Printf("   Roll Quality:        %.1f%% vs %.1f%% (QWERTY)", optRoll.totalRollRate*100, qwertyRoll.totalRollRate*100)
+
 	if optRoll.totalRollRate > qwertyRoll.totalRollRate {
 		improvement := (optRoll.totalRollRate - qwertyRoll.totalRollRate) / qwertyRoll.totalRollRate * 100
 		fmt.Printf(" \033[1;32m[%.1f%% BETTER]\033[0m\n", improvement)
@@ -1074,10 +1124,12 @@ func (kd *KeyboardDisplay) calculateFingerVariance(fingerUsage []int, totalChars
 
 	// Calculate variance
 	variance := 0.0
+
 	for _, usage := range fingerUsage {
 		diff := float64(usage) - mean
 		variance += diff * diff
 	}
+
 	variance /= float64(len(fingerUsage))
 
 	return variance

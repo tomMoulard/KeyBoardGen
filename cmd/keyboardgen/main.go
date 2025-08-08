@@ -21,20 +21,20 @@ import (
 
 // Config holds application configuration.
 type Config struct {
-	InputFile         string  `json:"input_file"`
-	OutputFile        string  `json:"output_file"`
-	ConfigFile        string  `json:"config_file"`
-	CharacterSet      string  `json:"character_set"` // "alphabet", "alphanumeric", "programming", "full"
-	PopulationSize    int     `json:"population_size"`
-	MaxGeneration     int     `json:"max_generation"`
-	MutationRate      float64 `json:"mutation_rate"`
-	CrossoverRate     float64 `json:"crossover_rate"`
-	ElitismCount      int     `json:"elitism_count"`
-	WorkerCount       int     `json:"worker_count"`
-	Verbose           bool    `json:"verbose"`
-	ShowProgress      bool    `json:"show_progress"`
-	SaveInterval      int     `json:"save_interval"`
-	DiverseInit       bool    `json:"diverse_init"` // Use diverse initialization strategies
+	InputFile      string  `json:"input_file"`
+	OutputFile     string  `json:"output_file"`
+	ConfigFile     string  `json:"config_file"`
+	CharacterSet   string  `json:"character_set"` // "alphabet", "alphanumeric", "programming", "full"
+	PopulationSize int     `json:"population_size"`
+	MaxGeneration  int     `json:"max_generation"`
+	MutationRate   float64 `json:"mutation_rate"`
+	CrossoverRate  float64 `json:"crossover_rate"`
+	ElitismCount   int     `json:"elitism_count"`
+	WorkerCount    int     `json:"worker_count"`
+	Verbose        bool    `json:"verbose"`
+	ShowProgress   bool    `json:"show_progress"`
+	SaveInterval   int     `json:"save_interval"`
+	DiverseInit    bool    `json:"diverse_init"` // Use diverse initialization strategies
 }
 
 // DefaultAppConfig returns default application configuration.

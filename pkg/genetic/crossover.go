@@ -1,7 +1,7 @@
 package genetic
 
 import (
-	"math/rand"
+	"math/rand/v2"
 )
 
 // CrossoverMethod defines different crossover strategies.
@@ -45,9 +45,9 @@ func (c *Crossover) orderCrossover(parent1, parent2 Individual) Individual {
 	length := len(parent1.Layout)
 
 	// Choose two random crossover points
-	point1 := rand.Intn(length)
+	point1 := rand.IntN(length)
 
-	point2 := rand.Intn(length)
+	point2 := rand.IntN(length)
 	if point1 > point2 {
 		point1, point2 = point2, point1
 	}
@@ -106,9 +106,9 @@ func (c *Crossover) partiallyMatchedCrossover(parent1, parent2 Individual) Indiv
 	length := len(parent1.Layout)
 
 	// Choose two random crossover points
-	point1 := rand.Intn(length)
+	point1 := rand.IntN(length)
 
-	point2 := rand.Intn(length)
+	point2 := rand.IntN(length)
 	if point1 > point2 {
 		point1, point2 = point2, point1
 	}

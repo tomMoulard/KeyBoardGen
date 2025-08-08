@@ -14,7 +14,7 @@ build: deps
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_DIR)
 
 test:
-	go test $(PKG_DIR)
+	go test -race -cover $(PKG_DIR)
 
 test-coverage:
 	go test -v -coverprofile=coverage.out $(PKG_DIR)

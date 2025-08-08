@@ -1,7 +1,7 @@
 package genetic
 
 import (
-	"math/rand"
+	"math/rand/v2"
 )
 
 // MutationMethod defines different mutation strategies.
@@ -64,12 +64,12 @@ func (m *Mutator) swapMutation(individual *Individual) {
 	length := len(individual.Layout)
 
 	// Choose two random positions
-	pos1 := rand.Intn(length)
-	pos2 := rand.Intn(length)
+	pos1 := rand.IntN(length)
+	pos2 := rand.IntN(length)
 
 	// Ensure different positions
 	for pos1 == pos2 && length > 1 {
-		pos2 = rand.Intn(length)
+		pos2 = rand.IntN(length)
 	}
 
 	// Swap
@@ -84,12 +84,12 @@ func (m *Mutator) insertionMutation(individual *Individual) {
 	}
 
 	// Choose source and destination positions
-	sourcePos := rand.Intn(length)
-	destPos := rand.Intn(length)
+	sourcePos := rand.IntN(length)
+	destPos := rand.IntN(length)
 
 	// Ensure different positions
 	for sourcePos == destPos {
-		destPos = rand.Intn(length)
+		destPos = rand.IntN(length)
 	}
 
 	// Remove element from source
@@ -119,8 +119,8 @@ func (m *Mutator) inversionMutation(individual *Individual) {
 	}
 
 	// Choose two random positions
-	pos1 := rand.Intn(length)
-	pos2 := rand.Intn(length)
+	pos1 := rand.IntN(length)
+	pos2 := rand.IntN(length)
 
 	// Ensure pos1 < pos2
 	if pos1 > pos2 {
@@ -143,8 +143,8 @@ func (m *Mutator) scrambleMutation(individual *Individual) {
 	}
 
 	// Choose two random positions
-	pos1 := rand.Intn(length)
-	pos2 := rand.Intn(length)
+	pos1 := rand.IntN(length)
+	pos2 := rand.IntN(length)
 
 	// Ensure pos1 <= pos2
 	if pos1 > pos2 {
@@ -161,7 +161,7 @@ func (m *Mutator) scrambleMutation(individual *Individual) {
 
 	// Shuffle subsequence using Fisher-Yates
 	for i := len(subsequence) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := rand.IntN(i + 1)
 		subsequence[i], subsequence[j] = subsequence[j], subsequence[i]
 	}
 
@@ -179,12 +179,12 @@ func (m *Mutator) displacementMutation(individual *Individual) {
 	}
 
 	// Choose subsequence to move
-	subStart := rand.Intn(length - 1)
-	subEnd := subStart + rand.Intn(length-subStart)
+	subStart := rand.IntN(length - 1)
+	subEnd := subStart + rand.IntN(length-subStart)
 	subLen := subEnd - subStart + 1
 
 	// Choose new position (not overlapping with current)
-	newPos := rand.Intn(length - subLen + 1)
+	newPos := rand.IntN(length - subLen + 1)
 
 	// Avoid overlapping positions
 	if newPos >= subStart && newPos <= subEnd {
@@ -305,20 +305,21 @@ func calculateLayoutDistance(ind1, ind2 Individual) float64 {
 	if len(ind1.Layout) == 0 || len(ind2.Layout) == 0 {
 		return 0.0
 	}
-	
+
 	// Use the minimum length to avoid index out of bounds
 	minLength := len(ind1.Layout)
 	if len(ind2.Layout) < minLength {
 		minLength = len(ind2.Layout)
 	}
-	
+
 	differences := 0
-	for i := 0; i < minLength; i++ {
+
+	for i := range minLength {
 		if ind1.Layout[i] != ind2.Layout[i] {
 			differences++
 		}
 	}
-	
+
 	// Add penalty for different length layouts
 	lengthDiff := abs(len(ind1.Layout) - len(ind2.Layout))
 	differences += lengthDiff
@@ -328,11 +329,11 @@ func calculateLayoutDistance(ind1, ind2 Individual) float64 {
 	if len(ind2.Layout) > maxLength {
 		maxLength = len(ind2.Layout)
 	}
-	
+
 	if maxLength == 0 {
 		return 0.0
 	}
-	
+
 	return float64(differences) / float64(maxLength)
 }
 
@@ -341,6 +342,7 @@ func abs(x int) int {
 	if x < 0 {
 		return -x
 	}
+
 	return x
 }
 

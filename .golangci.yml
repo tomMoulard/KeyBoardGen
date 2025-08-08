@@ -8,6 +8,9 @@ linters:
     # deprecated
     - wsl
 
+    # useless
+    - mnd
+
   settings:
     godox:
       keywords:
@@ -149,6 +152,8 @@ linters:
         - w http.ResponseWriter
         - r *http.Request
         - i int
+        - wg *sync.WaitGroup
+        - wg sync.WaitGroup
 
     testifylint:
       enable-all: true

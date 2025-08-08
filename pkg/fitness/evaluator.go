@@ -44,27 +44,27 @@ type FitnessEvaluator struct {
 
 // FitnessWeights defines importance of different fitness components.
 type FitnessWeights struct {
-	FingerDistance     float64 `json:"finger_distance"`
-	HandAlternation    float64 `json:"hand_alternation"`
-	FingerBalance      float64 `json:"finger_balance"`
-	RowJumping         float64 `json:"row_jumping"`
-	BigramEfficiency   float64 `json:"bigram_efficiency"`
-	SameFingerBigrams  float64 `json:"same_finger_bigrams"`  // New: penalize SFBs heavily
-	LateralStretches   float64 `json:"lateral_stretches"`   // New: penalize LSBs
-	RollQuality        float64 `json:"roll_quality"`        // New: reward good rolls
+	FingerDistance    float64 `json:"finger_distance"`
+	HandAlternation   float64 `json:"hand_alternation"`
+	FingerBalance     float64 `json:"finger_balance"`
+	RowJumping        float64 `json:"row_jumping"`
+	BigramEfficiency  float64 `json:"bigram_efficiency"`
+	SameFingerBigrams float64 `json:"same_finger_bigrams"` // New: penalize SFBs heavily
+	LateralStretches  float64 `json:"lateral_stretches"`   // New: penalize LSBs
+	RollQuality       float64 `json:"roll_quality"`        // New: reward good rolls
 }
 
 // DefaultWeights returns balanced fitness weights.
 func DefaultWeights() FitnessWeights {
 	return FitnessWeights{
-		FingerDistance:    0.15,  // Reduced to make room for modern metrics
-		HandAlternation:   0.15,  // Reduced
-		FingerBalance:     0.15,  // Reduced
-		RowJumping:        0.1,   // Reduced
-		BigramEfficiency:  0.1,   // Reduced
-		SameFingerBigrams: 0.25,  // High weight - SFBs are very bad
-		LateralStretches:  0.05,  // Moderate weight for LSBs
-		RollQuality:       0.05,  // Moderate weight for rolls
+		FingerDistance:    0.15, // Reduced to make room for modern metrics
+		HandAlternation:   0.15, // Reduced
+		FingerBalance:     0.15, // Reduced
+		RowJumping:        0.1,  // Reduced
+		BigramEfficiency:  0.1,  // Reduced
+		SameFingerBigrams: 0.25, // High weight - SFBs are very bad
+		LateralStretches:  0.05, // Moderate weight for LSBs
+		RollQuality:       0.05, // Moderate weight for rolls
 	}
 }
 
@@ -100,7 +100,7 @@ func (fe *FitnessEvaluator) Evaluate(layout []rune, charset *genetic.CharacterSe
 	balanceScore := fe.calculateFingerBalance(layout, charset, data, charToPos)
 	rowJumpScore := fe.calculateRowJumping(layout, charset, data, charToPos)
 	bigramScore := fe.calculateBigramEfficiency(layout, charset, data, charToPos)
-	
+
 	// New modern fitness components
 	sfbPenalty := fe.calculateSameFingerBigrams(layout, charset, data, charToPos)
 	lsbPenalty := fe.calculateLateralStretches(layout, charset, data, charToPos)
@@ -367,7 +367,7 @@ func (fe *FitnessEvaluator) calculateSameFingerBigrams(layout []rune, charset *g
 	}
 
 	sfbRate := float64(sfbCount) / float64(totalBigrams)
-	
+
 	// Return inverted score (fewer SFBs = higher score)
 	return 1.0 - sfbRate
 }
@@ -405,7 +405,7 @@ func (fe *FitnessEvaluator) calculateLateralStretches(layout []rune, charset *ge
 		// Check for lateral stretch bigrams (index fingers stretching outward)
 		// Left index (finger 3) stretching left, or right index (finger 4) stretching right
 		isLSB := false
-		
+
 		if finger1 == 3 && finger2 == 3 { // Both on left index
 			// Check if positions are far apart horizontally on same row
 			if coord1[1] == coord2[1] && math.Abs(coord1[0]-coord2[0]) > 2.0 {
@@ -428,7 +428,7 @@ func (fe *FitnessEvaluator) calculateLateralStretches(layout []rune, charset *ge
 	}
 
 	lsbRate := float64(lsbCount) / float64(totalBigrams)
-	
+
 	// Return inverted score (fewer LSBs = higher score)
 	return 1.0 - lsbRate
 }
@@ -467,7 +467,7 @@ func (fe *FitnessEvaluator) calculateRollQuality(layout []rune, charset *genetic
 		sameHand := (finger1 < 4 && finger2 < 4) || (finger1 >= 4 && finger2 >= 4)
 		adjacentFingers := math.Abs(float64(finger1-finger2)) == 1
 		sameRow := math.Abs(coord1[1]-coord2[1]) < 0.3
-		
+
 		if sameHand && adjacentFingers && sameRow {
 			// Inward rolls are better than outward rolls
 			isInward := false
@@ -476,7 +476,7 @@ func (fe *FitnessEvaluator) calculateRollQuality(layout []rune, charset *genetic
 			} else if finger1 >= 4 && finger2 >= 4 { // Right hand
 				isInward = finger1 > finger2 // Rolling from index toward pinky
 			}
-			
+
 			if isInward {
 				rollScore += float64(freq) * 0.8 // Good inward roll
 			} else {

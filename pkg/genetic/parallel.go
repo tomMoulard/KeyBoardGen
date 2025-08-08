@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"runtime"
 	"sync"
-	"time"
 )
 
 // max returns the maximum of two integers.
@@ -13,6 +12,7 @@ func max(a, b int) int {
 	if a > b {
 		return a
 	}
+
 	return b
 }
 
@@ -21,6 +21,7 @@ func min(a, b int) int {
 	if a < b {
 		return a
 	}
+
 	return b
 }
 
@@ -164,11 +165,12 @@ func NewParallelEvolver(evaluator FitnessEvaluator, config Config) *ParallelEvol
 	useDiversityMaintenance := config.PopulationSize >= 200
 
 	var adaptiveMutator *AdaptiveMutator
+
 	if useDiversityMaintenance {
 		// Create adaptive mutator for diversity maintenance with higher rates for large populations
 		baseRate := config.MutationRate
-		maxRate := config.MutationRate * 4  // More aggressive mutation for large populations
-		threshold := 0.25  // Higher threshold for large populations
+		maxRate := config.MutationRate * 4 // More aggressive mutation for large populations
+		threshold := 0.25                  // Higher threshold for large populations
 		adaptiveMutator = NewAdaptiveMutator(SwapMutation, baseRate, maxRate, threshold)
 	}
 
@@ -211,17 +213,17 @@ func (pe *ParallelEvolver) Evolve(ctx context.Context, population Population, co
 	adaptiveElitismCount := config.ElitismCount
 	if pe.useDiversityMaintenance {
 		// For large populations, use percentage-based elitism (1-3% of population)
-		minElitism := max(1, config.PopulationSize/100)  // 1% minimum
-		maxElitism := max(3, config.PopulationSize/33)   // 3% maximum
+		minElitism := max(1, config.PopulationSize/100) // 1% minimum
+		maxElitism := max(3, config.PopulationSize/33)  // 3% maximum
 		adaptiveElitismCount = max(minElitism, min(maxElitism, config.ElitismCount))
 	}
-	
+
 	elites := pe.selector.Select(population, adaptiveElitismCount)
-	
+
 	// Only inject random individuals if diversity is critically low
 	if pe.useDiversityMaintenance && diversity < 0.1 {
 		// Very low diversity: replace some elites with evaluated random individuals
-		eliteCount := max(1, adaptiveElitismCount*2/3)  // Keep 2/3 of elites
+		eliteCount := max(1, adaptiveElitismCount*2/3) // Keep 2/3 of elites
 		elites = elites[:eliteCount]
 
 		// Add some random individuals to boost diversity (but evaluate them first)
@@ -379,11 +381,11 @@ func NewParallelGA(evaluator FitnessEvaluator, config Config) *ParallelGA {
 	}
 }
 
-// CreateDiversePopulation creates a population using multiple initialization strategies
+// CreateDiversePopulation creates a population using multiple initialization strategies.
 func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 	population := make(Population, size)
 	charset := AlphabetOnly() // Default charset for now
-	
+
 	strategies := []InitializationStrategy{
 		FrequencyBased,
 		HandBalance,
@@ -391,22 +393,22 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 		CommonPatternsFirst,
 		AntiQWERTY,
 	}
-	
+
 	// For large populations, use fewer diverse individuals to avoid local optima trapping
-	diverseRatio := 0.5  // 50% diverse individuals
+	diverseRatio := 0.5 // 50% diverse individuals
 	if size >= 500 {
-		diverseRatio = 0.3  // Only 30% for very large populations
+		diverseRatio = 0.3 // Only 30% for very large populations
 	} else if size >= 200 {
-		diverseRatio = 0.4  // 40% for medium-large populations
+		diverseRatio = 0.4 // 40% for medium-large populations
 	}
-	
+
 	diverseCount := int(float64(size) * diverseRatio)
-	
+
 	// Create diverse individuals
-	for i := 0; i < diverseCount; i++ {
+	for i := range diverseCount {
 		strategyIndex := i % len(strategies)
 		strategy := strategies[strategyIndex]
-		
+
 		// Use data-aware strategies when data is available
 		if data != nil && (strategy == FrequencyBased || strategy == HandBalance || strategy == CommonPatternsFirst) {
 			population[i] = NewRandomIndividualWithStrategy(charset, strategy, data)
@@ -414,12 +416,12 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 			population[i] = NewRandomIndividualWithStrategy(charset, strategy, nil)
 		}
 	}
-	
+
 	// Fill the rest with random individuals for exploration
 	for i := diverseCount; i < size; i++ {
 		population[i] = NewRandomIndividual()
 	}
-	
+
 	return population
 }
 
@@ -493,76 +495,4 @@ func (pga *ParallelGA) RunWithDiverseInit(ctx context.Context, data KeyloggerDat
 	}
 
 	return bestIndividual, nil
-}
-
-// initRandom initializes random seed for parallel GA
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-// WorkerPool manages a pool of workers for various GA tasks.
-type WorkerPool struct {
-	workerCount int
-	jobs        chan func()
-	wg          sync.WaitGroup
-	ctx         context.Context
-	cancel      context.CancelFunc
-}
-
-// NewWorkerPool creates a new worker pool.
-func NewWorkerPool(workerCount int) *WorkerPool {
-	if workerCount <= 0 {
-		workerCount = runtime.NumCPU()
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	wp := &WorkerPool{
-		workerCount: workerCount,
-		jobs:        make(chan func(), workerCount*2),
-		ctx:         ctx,
-		cancel:      cancel,
-	}
-
-	// Start workers
-	for range workerCount {
-		wp.wg.Add(1)
-
-		go wp.worker()
-	}
-
-	return wp
-}
-
-// Submit adds a job to the worker pool.
-func (wp *WorkerPool) Submit(job func()) {
-	select {
-	case wp.jobs <- job:
-	case <-wp.ctx.Done():
-	}
-}
-
-// Close shuts down the worker pool.
-func (wp *WorkerPool) Close() {
-	wp.cancel()
-	close(wp.jobs)
-	wp.wg.Wait()
-}
-
-// worker processes jobs from the queue.
-func (wp *WorkerPool) worker() {
-	defer wp.wg.Done()
-
-	for {
-		select {
-		case job, ok := <-wp.jobs:
-			if !ok {
-				return // Channel closed
-			}
-
-			job()
-		case <-wp.ctx.Done():
-			return
-		}
-	}
 }

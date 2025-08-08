@@ -1,15 +1,9 @@
 package genetic
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"sync"
-	"time"
 )
-
-func init() {
-	// Initialize random seed once at package startup
-	rand.Seed(time.Now().UnixNano())
-}
 
 // KeyPosition represents a key position on the keyboard.
 type KeyPosition int
@@ -169,7 +163,7 @@ func NewRandomIndividual() Individual {
 	return NewRandomIndividualWithCharset(AlphabetOnly())
 }
 
-// InitializationStrategy represents different ways to create initial individuals
+// InitializationStrategy represents different ways to create initial individuals.
 type InitializationStrategy int
 
 const (
@@ -193,7 +187,7 @@ func NewRandomIndividualWithCharset(charset *CharacterSet) Individual {
 
 	// Fisher-Yates shuffle
 	for i := len(chars) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := rand.IntN(i + 1)
 		chars[i], chars[j] = chars[j], chars[i]
 	}
 
@@ -228,8 +222,9 @@ func NewRandomIndividualWithStrategy(charset *CharacterSet, strategy Initializat
 		// Default to random shuffle
 		chars = make([]rune, len(charset.Characters))
 		copy(chars, charset.Characters)
+
 		for i := len(chars) - 1; i > 0; i-- {
-			j := rand.Intn(i + 1)
+			j := rand.IntN(i + 1)
 			chars[i], chars[j] = chars[j], chars[i]
 		}
 	}
@@ -242,7 +237,7 @@ func NewRandomIndividualWithStrategy(charset *CharacterSet, strategy Initializat
 	}
 }
 
-// createFrequencyBasedLayout places frequent characters in home row positions
+// createFrequencyBasedLayout places frequent characters in home row positions.
 func createFrequencyBasedLayout(charset *CharacterSet, data KeyloggerDataInterface) []rune {
 	chars := make([]rune, len(charset.Characters))
 	copy(chars, charset.Characters)
@@ -250,9 +245,10 @@ func createFrequencyBasedLayout(charset *CharacterSet, data KeyloggerDataInterfa
 	if data == nil {
 		// Fallback to random if no data
 		for i := len(chars) - 1; i > 0; i-- {
-			j := rand.Intn(i + 1)
+			j := rand.IntN(i + 1)
 			chars[i], chars[j] = chars[j], chars[i]
 		}
+
 		return chars
 	}
 
@@ -261,7 +257,7 @@ func createFrequencyBasedLayout(charset *CharacterSet, data KeyloggerDataInterfa
 		char rune
 		freq int
 	}
-	
+
 	frequencies := make([]charFreq, 0, len(chars))
 	for _, char := range chars {
 		freq := data.GetCharFreq(char)
@@ -269,7 +265,7 @@ func createFrequencyBasedLayout(charset *CharacterSet, data KeyloggerDataInterfa
 	}
 
 	// Sort by frequency (descending)
-	for i := 0; i < len(frequencies)-1; i++ {
+	for i := range len(frequencies) - 1 {
 		for j := i + 1; j < len(frequencies); j++ {
 			if frequencies[j].freq > frequencies[i].freq {
 				frequencies[i], frequencies[j] = frequencies[j], frequencies[i]
@@ -280,9 +276,10 @@ func createFrequencyBasedLayout(charset *CharacterSet, data KeyloggerDataInterfa
 	// Place most frequent characters in home row (positions 9-17 for alphabet)
 	result := make([]rune, len(chars))
 	homeRowPositions := []int{9, 10, 11, 12, 13, 14, 15, 16, 17} // Home row
-	
+
 	// Fill home row with most frequent characters
 	freqIndex := 0
+
 	for i, pos := range homeRowPositions {
 		if i < len(frequencies) && pos < len(result) {
 			result[pos] = frequencies[freqIndex].char
@@ -298,12 +295,13 @@ func createFrequencyBasedLayout(charset *CharacterSet, data KeyloggerDataInterfa
 
 	// Shuffle remaining characters
 	for i := len(remainingChars) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := rand.IntN(i + 1)
 		remainingChars[i], remainingChars[j] = remainingChars[j], remainingChars[i]
 	}
 
 	// Fill non-home-row positions
 	remainingIndex := 0
+
 	for i := range result {
 		if result[i] == 0 { // Empty position
 			if remainingIndex < len(remainingChars) {
@@ -316,7 +314,7 @@ func createFrequencyBasedLayout(charset *CharacterSet, data KeyloggerDataInterfa
 	return result
 }
 
-// createHandBalancedLayout tries to balance frequent characters between hands
+// createHandBalancedLayout tries to balance frequent characters between hands.
 func createHandBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface) []rune {
 	chars := make([]rune, len(charset.Characters))
 	copy(chars, charset.Characters)
@@ -324,9 +322,10 @@ func createHandBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface
 	if data == nil {
 		// Fallback to random
 		for i := len(chars) - 1; i > 0; i-- {
-			j := rand.Intn(i + 1)
+			j := rand.IntN(i + 1)
 			chars[i], chars[j] = chars[j], chars[i]
 		}
+
 		return chars
 	}
 
@@ -335,7 +334,7 @@ func createHandBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface
 		char rune
 		freq int
 	}
-	
+
 	frequencies := make([]charFreq, 0, len(chars))
 	for _, char := range chars {
 		freq := data.GetCharFreq(char)
@@ -343,7 +342,7 @@ func createHandBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface
 	}
 
 	// Sort by frequency (descending)
-	for i := 0; i < len(frequencies)-1; i++ {
+	for i := range len(frequencies) - 1 {
 		for j := i + 1; j < len(frequencies); j++ {
 			if frequencies[j].freq > frequencies[i].freq {
 				frequencies[i], frequencies[j] = frequencies[j], frequencies[i]
@@ -352,10 +351,10 @@ func createHandBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface
 	}
 
 	result := make([]rune, len(chars))
-	
+
 	// Define left and right hand positions (for standard keyboard)
 	leftHand := []int{0, 1, 2, 3, 4, 9, 10, 11, 12, 13, 18, 19, 20, 21, 22} // Left side
-	rightHand := []int{5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25}             // Right side
+	rightHand := []int{5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25}              // Right side
 
 	// Alternate placing frequent characters between hands
 	leftIndex, rightIndex := 0, 0
@@ -378,7 +377,7 @@ func createHandBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface
 	return result
 }
 
-// createRowBalancedLayout distributes characters across rows based on frequency
+// createRowBalancedLayout distributes characters across rows based on frequency.
 func createRowBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface) []rune {
 	chars := make([]rune, len(charset.Characters))
 	copy(chars, charset.Characters)
@@ -392,13 +391,13 @@ func createRowBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface)
 
 	// Shuffle and distribute
 	for i := len(chars) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := rand.IntN(i + 1)
 		chars[i], chars[j] = chars[j], chars[i]
 	}
 
 	// Fill home row first, then top, then bottom
 	charIndex := 0
-	
+
 	// Fill home row
 	for _, pos := range homeRow {
 		if charIndex < len(chars) && pos < len(result) {
@@ -426,7 +425,7 @@ func createRowBalancedLayout(charset *CharacterSet, data KeyloggerDataInterface)
 	return result
 }
 
-// createPatternBasedLayout tries to optimize for common bigram patterns
+// createPatternBasedLayout tries to optimize for common bigram patterns.
 func createPatternBasedLayout(charset *CharacterSet, data KeyloggerDataInterface) []rune {
 	chars := make([]rune, len(charset.Characters))
 	copy(chars, charset.Characters)
@@ -434,15 +433,16 @@ func createPatternBasedLayout(charset *CharacterSet, data KeyloggerDataInterface
 	if data == nil {
 		// Fallback to random
 		for i := len(chars) - 1; i > 0; i-- {
-			j := rand.Intn(i + 1)
+			j := rand.IntN(i + 1)
 			chars[i], chars[j] = chars[j], chars[i]
 		}
+
 		return chars
 	}
 
 	// Start with a base shuffle
 	for i := len(chars) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := rand.IntN(i + 1)
 		chars[i], chars[j] = chars[j], chars[i]
 	}
 
@@ -458,6 +458,7 @@ func createPatternBasedLayout(charset *CharacterSet, data KeyloggerDataInterface
 				// Try to move vowel to a different hand position
 				swapWith := (i + len(result)/2) % len(result)
 				result[i], result[swapWith] = result[swapWith], result[i]
+
 				break
 			}
 		}
@@ -466,15 +467,17 @@ func createPatternBasedLayout(charset *CharacterSet, data KeyloggerDataInterface
 	return result
 }
 
-// createAntiQWERTYLayout creates a layout that's maximally different from QWERTY
+// createAntiQWERTYLayout creates a layout that's maximally different from QWERTY.
 func createAntiQWERTYLayout(charset *CharacterSet) []rune {
 	chars := make([]rune, len(charset.Characters))
 	copy(chars, charset.Characters)
 
 	// QWERTY layout for reference
-	qwerty := []rune{'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
+	qwerty := []rune{
+		'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
 		'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
-		'z', 'x', 'c', 'v', 'b', 'n', 'm'}
+		'z', 'x', 'c', 'v', 'b', 'n', 'm',
+	}
 
 	result := make([]rune, len(chars))
 
@@ -488,9 +491,11 @@ func createAntiQWERTYLayout(charset *CharacterSet) []rune {
 
 		// Find the character in our charset
 		charIndex := -1
+
 		for j, char := range chars {
 			if char == qwertyChar {
 				charIndex = j
+
 				break
 			}
 		}
@@ -498,7 +503,7 @@ func createAntiQWERTYLayout(charset *CharacterSet) []rune {
 		if charIndex >= 0 && !used[qwertyChar] {
 			// Place it as far as possible from its QWERTY position
 			targetPos := (i + len(result)/2) % len(result)
-			
+
 			// If target position is taken, find next available
 			for result[targetPos] != 0 {
 				targetPos = (targetPos + 1) % len(result)
@@ -511,12 +516,14 @@ func createAntiQWERTYLayout(charset *CharacterSet) []rune {
 
 	// Fill remaining positions with remaining characters
 	charIndex := 0
+
 	for i, char := range result {
 		if char == 0 { // Empty position
 			// Find next unused character
 			for charIndex < len(chars) && used[chars[charIndex]] {
 				charIndex++
 			}
+
 			if charIndex < len(chars) {
 				result[i] = chars[charIndex]
 				used[chars[charIndex]] = true

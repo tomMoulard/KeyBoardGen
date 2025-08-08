@@ -1,7 +1,7 @@
 package genetic
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"sort"
 )
 
@@ -53,7 +53,7 @@ func (s *Selector) tournamentSelect(population Population, count int) []Individu
 		// Create tournament
 		tournament := make([]Individual, s.config.TournamentSize)
 		for j := range s.config.TournamentSize {
-			idx := rand.Intn(len(population))
+			idx := rand.IntN(len(population))
 			tournament[j] = population[idx]
 		}
 
@@ -193,7 +193,7 @@ func (s *Selector) randomSelect(population Population, count int) []Individual {
 	selected := make([]Individual, 0, count)
 
 	for range count {
-		idx := rand.Intn(len(population))
+		idx := rand.IntN(len(population))
 		selected = append(selected, population[idx].Clone())
 	}
 
