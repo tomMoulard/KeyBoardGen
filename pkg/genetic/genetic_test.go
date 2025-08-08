@@ -5,6 +5,8 @@ import (
 )
 
 func TestNewRandomIndividual(t *testing.T) {
+	t.Parallel()
+
 	ind := NewRandomIndividual()
 
 	// Test that individual is valid
@@ -18,19 +20,22 @@ func TestNewRandomIndividual(t *testing.T) {
 		seen[char] = true
 	}
 
-	if len(seen) != 26 {
-		t.Errorf("Expected 26 unique characters, got %d", len(seen))
+	if len(seen) != 70 {
+		t.Errorf("Expected 70 unique characters, got %d", len(seen))
 	}
 
-	// Test that all characters are lowercase letters
+	// Test that all characters are from the full keyboard charset
+	charset := FullKeyboardCharset()
 	for _, char := range ind.Layout {
-		if char < 'a' || char > 'z' {
+		if !charset.Contains(char) {
 			t.Errorf("Invalid character in layout: %c", char)
 		}
 	}
 }
 
 func TestIndividualClone(t *testing.T) {
+	t.Parallel()
+
 	original := NewRandomIndividual()
 	original.Fitness = 0.5
 	original.Age = 10
@@ -68,6 +73,8 @@ func TestIndividualClone(t *testing.T) {
 }
 
 func TestIndividualIsValid(t *testing.T) {
+	t.Parallel()
+
 	// Test valid individual
 	valid := NewRandomIndividual()
 	if !valid.IsValid() {
@@ -85,13 +92,15 @@ func TestIndividualIsValid(t *testing.T) {
 	// Test invalid individual with invalid character
 	invalid2 := NewRandomIndividual()
 
-	invalid2.Layout[0] = '1' // Not a lowercase letter
+	invalid2.Layout[0] = 'Ω' // Character not in full keyboard charset
 	if invalid2.IsValid() {
-		t.Error("Invalid individual with number reported as valid")
+		t.Error("Invalid individual with unsupported character reported as valid")
 	}
 }
 
 func TestSwapMutation(t *testing.T) {
+	t.Parallel()
+
 	mutator := NewMutator(SwapMutation, 1.0) // 100% mutation rate
 	original := NewRandomIndividual()
 	original.Fitness = 0.5
@@ -129,23 +138,26 @@ func TestSwapMutation(t *testing.T) {
 }
 
 func TestOrderCrossover(t *testing.T) {
+	t.Parallel()
+
 	crossover := NewCrossover(OrderCrossover)
 
 	// Create test parents with proper initialization
-	charset := AlphabetOnly()
+	charset := FullKeyboardCharset()
 	parent1 := Individual{
-		Layout:  make([]rune, 26),
+		Layout:  make([]rune, 70),
 		Charset: charset,
 	}
 	parent2 := Individual{
-		Layout:  make([]rune, 26),
+		Layout:  make([]rune, 70),
 		Charset: charset,
 	}
 
-	// Set up known layouts
-	for i := range 26 {
-		parent1.Layout[i] = rune('a' + i) // abcd...z
-		parent2.Layout[i] = rune('z' - i) // zyxw...a
+	// Set up known layouts with full charset
+	chars := charset.Characters
+	for i := range 70 {
+		parent1.Layout[i] = chars[i]
+		parent2.Layout[i] = chars[69-i] // Reverse order
 	}
 
 	child := crossover.Apply(parent1, parent2)
@@ -168,6 +180,8 @@ func TestOrderCrossover(t *testing.T) {
 }
 
 func TestTournamentSelection(t *testing.T) {
+	t.Parallel()
+
 	selector := NewSelector(TournamentSelection, DefaultConfig())
 
 	// Create test population with known fitness values
@@ -193,6 +207,8 @@ func TestTournamentSelection(t *testing.T) {
 }
 
 func TestCalculatePopulationDiversity(t *testing.T) {
+	t.Parallel()
+
 	// Test with identical population (zero diversity)
 	identical := make(Population, 5)
 
@@ -222,10 +238,12 @@ func TestCalculatePopulationDiversity(t *testing.T) {
 }
 
 func TestValidateChild(t *testing.T) {
+	t.Parallel()
+
 	// Create invalid child with duplicates
 	invalid := Individual{
-		Layout:  make([]rune, 26),
-		Charset: AlphabetOnly(),
+		Layout:  make([]rune, 70),
+		Charset: FullKeyboardCharset(),
 	}
 	invalid.Layout[0] = 'a'
 	invalid.Layout[1] = 'a' // Duplicate
@@ -240,6 +258,8 @@ func TestValidateChild(t *testing.T) {
 }
 
 func TestKeyloggerData(t *testing.T) {
+	t.Parallel()
+
 	data := NewKeyloggerData()
 
 	// Test adding characters
@@ -269,7 +289,7 @@ func TestKeyloggerData(t *testing.T) {
 
 // Benchmark tests.
 func BenchmarkNewRandomIndividual(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		NewRandomIndividual()
 	}
 }
@@ -280,7 +300,7 @@ func BenchmarkSwapMutation(b *testing.B) {
 
 	b.ResetTimer()
 
-	for range b.N {
+	for b.Loop() {
 		mutator.Apply(individual)
 	}
 }
@@ -292,7 +312,7 @@ func BenchmarkOrderCrossover(b *testing.B) {
 
 	b.ResetTimer()
 
-	for range b.N {
+	for b.Loop() {
 		crossover.Apply(parent1, parent2)
 	}
 }
@@ -308,7 +328,7 @@ func BenchmarkTournamentSelection(b *testing.B) {
 
 	b.ResetTimer()
 
-	for range b.N {
+	for b.Loop() {
 		selector.Select(population, 10)
 	}
 }

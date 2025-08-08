@@ -371,20 +371,21 @@ func (pe *ParallelEvolver) offspringWorker(ctx context.Context, wg *sync.WaitGro
 type ParallelGA struct {
 	evolver *ParallelEvolver
 	config  Config
+	charset *CharacterSet
 }
 
 // NewParallelGA creates a new parallel genetic algorithm.
-func NewParallelGA(evaluator FitnessEvaluator, config Config) *ParallelGA {
+func NewParallelGA(evaluator FitnessEvaluator, config Config, charset *CharacterSet) *ParallelGA {
 	return &ParallelGA{
 		evolver: NewParallelEvolver(evaluator, config),
 		config:  config,
+		charset: charset,
 	}
 }
 
 // CreateDiversePopulation creates a population using multiple initialization strategies.
-func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
+func CreateDiversePopulation(size int, data KeyloggerDataInterface, charset *CharacterSet) Population {
 	population := make(Population, size)
-	charset := AlphabetOnly() // Default charset for now
 
 	strategies := []InitializationStrategy{
 		FrequencyBased,
@@ -419,7 +420,7 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 
 	// Fill the rest with random individuals for exploration
 	for i := diverseCount; i < size; i++ {
-		population[i] = NewRandomIndividual()
+		population[i] = NewRandomIndividualWithCharset(charset)
 	}
 
 	return population
@@ -428,7 +429,7 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 // Run executes the genetic algorithm.
 func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, callback func(generation int, best Individual)) (Individual, error) {
 	// Initialize population
-	population := CreateDiversePopulation(pga.config.PopulationSize, data)
+	population := CreateDiversePopulation(pga.config.PopulationSize, data, pga.charset)
 
 	// Evaluate initial population fitness
 	err := pga.evolver.evaluator.EvaluatePopulation(ctx, population, data)

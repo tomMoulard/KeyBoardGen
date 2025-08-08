@@ -136,6 +136,44 @@ func (kd *KeyloggerData) GetCharFreq(char rune) int {
 	return kd.CharFrequency[char]
 }
 
+// GetBigramFreq safely gets bigram frequency.
+func (kd *KeyloggerData) GetBigramFreq(bigram string) int {
+	kd.mutex.RLock()
+	defer kd.mutex.RUnlock()
+
+	return kd.BigramFreq[bigram]
+}
+
+// GetTrigramFreq safely gets trigram frequency.
+func (kd *KeyloggerData) GetTrigramFreq(trigram string) int {
+	kd.mutex.RLock()
+	defer kd.mutex.RUnlock()
+
+	return kd.TrigramFreq[trigram]
+}
+
+// GetTotalChars safely gets total character count.
+func (kd *KeyloggerData) GetTotalChars() int {
+	kd.mutex.RLock()
+	defer kd.mutex.RUnlock()
+
+	return kd.TotalChars
+}
+
+// GetAllBigrams safely gets all bigrams.
+func (kd *KeyloggerData) GetAllBigrams() map[string]int {
+	kd.mutex.RLock()
+	defer kd.mutex.RUnlock()
+
+	// Create a copy to avoid race conditions
+	result := make(map[string]int)
+	for k, v := range kd.BigramFreq {
+		result[k] = v
+	}
+
+	return result
+}
+
 // Clone creates a deep copy of an individual.
 func (ind Individual) Clone() Individual {
 	clone := Individual{
@@ -158,9 +196,9 @@ func (ind Individual) IsValid() bool {
 	return ind.Charset.IsValid(ind.Layout)
 }
 
-// NewRandomIndividual creates a random individual with shuffled alphabet (legacy function).
+// NewRandomIndividual creates a random individual with full keyboard charset.
 func NewRandomIndividual() Individual {
-	return NewRandomIndividualWithCharset(AlphabetOnly())
+	return NewRandomIndividualWithCharset(FullKeyboardCharset())
 }
 
 // InitializationStrategy represents different ways to create initial individuals.
@@ -178,7 +216,7 @@ const (
 // NewRandomIndividualWithCharset creates a random individual using the specified character set.
 func NewRandomIndividualWithCharset(charset *CharacterSet) Individual {
 	if charset == nil {
-		charset = AlphabetOnly()
+		charset = FullKeyboardCharset()
 	}
 
 	// Copy characters for shuffling
@@ -202,7 +240,7 @@ func NewRandomIndividualWithCharset(charset *CharacterSet) Individual {
 // NewRandomIndividualWithStrategy creates a random individual using a specific initialization strategy.
 func NewRandomIndividualWithStrategy(charset *CharacterSet, strategy InitializationStrategy, data KeyloggerDataInterface) Individual {
 	if charset == nil {
-		charset = AlphabetOnly()
+		charset = FullKeyboardCharset()
 	}
 
 	var chars []rune

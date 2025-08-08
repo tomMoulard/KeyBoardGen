@@ -7,7 +7,6 @@ import (
 	"io"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/tommoulard/keyboardgen/pkg/genetic"
 )
@@ -46,7 +45,6 @@ type ParseConfig struct {
 	IgnoreCase         bool        `json:"ignore_case"`
 	IgnoreNumbers      bool        `json:"ignore_numbers"`
 	IgnoreSpecialChars bool        `json:"ignore_special_chars"`
-	CharacterSet       string      `json:"character_set"` // "alphabet", "alphanumeric", "programming", "full"
 	MinWordLength      int         `json:"min_word_length"`
 	MaxLineLength      int         `json:"max_line_length"`
 }
@@ -58,7 +56,6 @@ func DefaultConfig() ParseConfig {
 		IgnoreCase:         true,
 		IgnoreNumbers:      true,
 		IgnoreSpecialChars: true,
-		CharacterSet:       "alphabet",
 		MinWordLength:      1,
 		MaxLineLength:      1000,
 	}
@@ -71,7 +68,6 @@ func ProgrammingConfig() ParseConfig {
 		IgnoreCase:         false, // Programming is case-sensitive
 		IgnoreNumbers:      false, // Include numbers
 		IgnoreSpecialChars: false, // Include special characters
-		CharacterSet:       "programming",
 		MinWordLength:      1,
 		MaxLineLength:      1000,
 	}
@@ -84,7 +80,6 @@ func FullKeyboardConfig() ParseConfig {
 		IgnoreCase:         false,
 		IgnoreNumbers:      false,
 		IgnoreSpecialChars: false,
-		CharacterSet:       "full",
 		MinWordLength:      1,
 		MaxLineLength:      1000,
 	}
@@ -226,26 +221,16 @@ func (kp *KeyloggerParser) processJSON(line string, config ParseConfig) (string,
 // shouldIncludeChar determines if a character should be included based on character set.
 func (kp *KeyloggerParser) shouldIncludeChar(char rune, config ParseConfig) bool {
 	// Get the character set for this configuration
-	charset := genetic.GetCharsetByName(config.CharacterSet)
+	charset := genetic.FullKeyboardCharset()
 
 	// Use character set to determine inclusion
-	if charset.Contains(char) {
-		return true
-	}
-
-	// Legacy behavior for backward compatibility
-	if config.CharacterSet == "alphabet" || config.CharacterSet == "" {
-		// Only include lowercase letters a-z for alphabet-only mode
-		return unicode.IsLetter(char) && char >= 'a' && char <= 'z'
-	}
-
-	return false
+	return charset.Contains(char)
 }
 
 // extractFrequencies extracts character and n-gram frequencies based on character set.
 func (kp *KeyloggerParser) extractFrequencies(text string, config ParseConfig) {
 	runes := []rune(text)
-	charset := genetic.GetCharsetByName(config.CharacterSet)
+	charset := genetic.FullKeyboardCharset()
 
 	// Extract character frequencies
 	for _, char := range runes {

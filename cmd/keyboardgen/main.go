@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -257,7 +258,7 @@ func runGA(ctx context.Context, appConfig Config) error {
 		fmt.Println("Using custom configuration")
 	}
 
-	ga := genetic.NewParallelGA(fitnessEvaluator, gaConfig)
+	ga := genetic.NewParallelGA(fitnessEvaluator, gaConfig, charset)
 
 	fmt.Printf("Starting genetic algorithm with:\n")
 	fmt.Printf("- Population size: %d\n", gaConfig.PopulationSize)
@@ -307,10 +308,9 @@ func runGA(ctx context.Context, appConfig Config) error {
 	// Show enhanced summary first
 	kbDisplay.PrintSummary(bestIndividual, keyloggerData, fitnessEvaluator)
 
-	// Basic layout display
-	fmt.Printf("\n\033[1;34mOPTIMIZED KEYBOARD LAYOUT:\033[0m\n")
-	kbDisplay.SetOptions(false, false, false)
-	kbDisplay.PrintLayout(bestIndividual, keyloggerData)
+	// Use layered layout display
+	fmt.Printf("\n\033[1;34mOPTIMIZED KEYBOARD LAYOUT (ALL LAYERS):\033[0m\n")
+	kbDisplay.PrintLayeredLayout(bestIndividual, keyloggerData, "qwerty")
 
 	// Print comprehensive statistics
 	kbDisplay.PrintStatistics(bestIndividual, keyloggerData)
@@ -350,12 +350,72 @@ func saveLayout(individual genetic.Individual, filename string) error {
 
 	layout["positions"] = positions
 
-	// Marshal to JSON
-	data, err := json.MarshalIndent(layout, "", "  ")
+	// Add optimized keyboard layers information using the improved display logic
+	kbDisplay := display.NewKeyboardDisplay()
+	optimizedLayout := kbDisplay.CreateOptimizedLayeredLayout(individual)
+
+	optimizedLayers := make(map[string]map[string]any)
+	optimizedLayers["base"] = make(map[string]any)
+	optimizedLayers["shift"] = make(map[string]any)
+	optimizedLayers["altgr"] = make(map[string]any)
+
+	// Show all characters in the optimized layout
+	optimizedChars := make([]string, len(individual.Layout))
+	for i, char := range individual.Layout {
+		optimizedChars[i] = string(char)
+	}
+
+	optimizedLayers["base"]["characters"] = optimizedChars
+	optimizedLayers["base"]["layout_string"] = string(individual.Layout)
+
+	// Use the properly constructed layered layout from display package
+	for pos := 0; pos < len(individual.Layout) && pos < 70; pos++ {
+		if layeredKey, exists := optimizedLayout.Keys[pos]; exists {
+			// Base layer
+			optimizedLayers["base"][fmt.Sprintf("pos_%d", pos)] = string(layeredKey.BaseChar)
+
+			// Shift layer (only if character is assigned, i.e., not 0)
+			if layeredKey.ShiftChar != 0 {
+				optimizedLayers["shift"][fmt.Sprintf("pos_%d", pos)] = string(layeredKey.ShiftChar)
+			}
+
+			// AltGr layer (if exists)
+			if layeredKey.AltGrChar != nil {
+				optimizedLayers["altgr"][fmt.Sprintf("pos_%d", pos)] = string(*layeredKey.AltGrChar)
+			}
+		}
+	}
+
+	// Add character set information
+	optimizedLayers["base"]["charset_name"] = individual.Charset.Name
+	optimizedLayers["base"]["charset_size"] = individual.Charset.Size
+	optimizedLayers["base"]["total_positions"] = len(individual.Layout)
+
+	layout["optimized_keyboard_layers"] = optimizedLayers
+
+	// Add metadata about layers
+	layerMetadata := make(map[string]any)
+	layerMetadata["layer_costs"] = map[string]float64{
+		"base":  1.0,
+		"shift": 1.5,
+		"altgr": 2.0,
+	}
+	layerMetadata["description"] = "Keyboard layers show character access patterns. Base layer requires no modifiers, Shift layer requires Shift key, AltGr layer requires AltGr (Right Alt) key."
+
+	layout["layer_metadata"] = layerMetadata
+
+	// Marshal to JSON with HTML escaping disabled for better readability
+	var buf bytes.Buffer
+
+	encoder := json.NewEncoder(&buf)
+	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false) // Don't escape <, >, &, etc.
+
+	err := encoder.Encode(layout)
 	if err != nil {
 		return fmt.Errorf("failed to marshal layout: %w", err)
 	}
 
 	// Write to file
-	return os.WriteFile(filename, data, 0o644)
+	return os.WriteFile(filename, buf.Bytes(), 0o644)
 }

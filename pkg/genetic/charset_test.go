@@ -4,67 +4,17 @@ import (
 	"testing"
 )
 
-func TestAlphabetOnly(t *testing.T) {
-	charset := AlphabetOnly()
-	if charset == nil {
-		t.Fatal("AlphabetOnly returned nil")
-	}
-
-	if charset.Size != 26 {
-		t.Errorf("AlphabetOnly size should be 26, got %d", charset.Size)
-	}
-
-	if !charset.Contains('a') || !charset.Contains('z') {
-		t.Error("AlphabetOnly should contain 'a' and 'z'")
-	}
-
-	if charset.Contains('1') || charset.Contains('!') {
-		t.Error("AlphabetOnly should not contain numbers or special characters")
-	}
-}
-
-func TestProgrammingCharset(t *testing.T) {
-	charset := ProgrammingCharset()
-	if charset == nil {
-		t.Fatal("ProgrammingCharset returned nil")
-	}
-
-	// Should contain letters
-	if !charset.Contains('a') || !charset.Contains('z') {
-		t.Error("ProgrammingCharset should contain letters")
-	}
-
-	// Should contain numbers
-	if !charset.Contains('0') || !charset.Contains('9') {
-		t.Error("ProgrammingCharset should contain numbers")
-	}
-
-	// Should contain special characters
-	if !charset.Contains('$') || !charset.Contains('(') || !charset.Contains(')') {
-		t.Error("ProgrammingCharset should contain special characters like $, (, )")
-	}
-
-	if !charset.Contains('{') || !charset.Contains('}') {
-		t.Error("ProgrammingCharset should contain braces")
-	}
-
-	if !charset.Contains(';') || !charset.Contains('/') {
-		t.Error("ProgrammingCharset should contain programming symbols")
-	}
-}
-
 func TestFullKeyboardCharset(t *testing.T) {
+	t.Parallel()
+
 	charset := FullKeyboardCharset()
 	if charset == nil {
 		t.Fatal("FullKeyboardCharset returned nil")
 	}
 
-	// Should contain all programming charset characters
-	progCharset := ProgrammingCharset()
-	for _, char := range progCharset.Characters {
-		if !charset.Contains(char) {
-			t.Errorf("FullKeyboardCharset should contain programming character '%c'", char)
-		}
+	// Should contain programming-specific characters (no need to test all since it's now the full keyboard)
+	if !charset.Contains('$') || !charset.Contains('{') || !charset.Contains('}') {
+		t.Error("FullKeyboardCharset should contain programming characters")
 	}
 
 	// Should contain space
@@ -74,7 +24,9 @@ func TestFullKeyboardCharset(t *testing.T) {
 }
 
 func TestCharacterSetValidation(t *testing.T) {
-	charset := ProgrammingCharset()
+	t.Parallel()
+
+	charset := FullKeyboardCharset()
 
 	// Test valid layout
 	validLayout := make([]rune, charset.Size)
@@ -110,6 +62,8 @@ func TestCharacterSetValidation(t *testing.T) {
 }
 
 func TestCustomCharset(t *testing.T) {
+	t.Parallel()
+
 	customChars := "abc123!@#"
 	charset := CustomCharset("test", customChars)
 
@@ -126,28 +80,10 @@ func TestCustomCharset(t *testing.T) {
 	}
 }
 
-func TestCharsetByName(t *testing.T) {
-	testCases := []struct {
-		name     string
-		expected int
-	}{
-		{"alphabet", 26},
-		{"alphanumeric", 36},
-		{"programming", len(ProgrammingCharset().Characters)},
-		{"full", len(FullKeyboardCharset().Characters)},
-		{"unknown", 26}, // Should default to alphabet
-	}
-
-	for _, tc := range testCases {
-		charset := GetCharsetByName(tc.name)
-		if charset.Size != tc.expected {
-			t.Errorf("Charset %s should have size %d, got %d", tc.name, tc.expected, charset.Size)
-		}
-	}
-}
-
 func TestNewRandomIndividualWithCharset(t *testing.T) {
-	charset := ProgrammingCharset()
+	t.Parallel()
+
+	charset := FullKeyboardCharset()
 	individual := NewRandomIndividualWithCharset(charset)
 
 	if individual.Charset != charset {

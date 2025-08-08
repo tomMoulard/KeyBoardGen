@@ -19,6 +19,8 @@ type LayoutResult struct {
 
 // TestMainApplicationNullCharacterRegression tests the complete application.
 func TestMainApplicationNullCharacterRegression(t *testing.T) {
+	t.Parallel()
+
 	// Build the application
 	buildCmd := exec.Command("go", "build", "-o", "keyboardgen_test", "./cmd/keyboardgen")
 	if err := buildCmd.Run(); err != nil {
@@ -77,35 +79,38 @@ func TestMainApplicationNullCharacterRegression(t *testing.T) {
 		t.Errorf("CRITICAL REGRESSION: Layout contains null characters: %q", result.Layout)
 	}
 
-	// Test 2: Layout should be exactly 26 characters
-	if len(result.Layout) != 26 {
-		t.Errorf("REGRESSION: Layout should be 26 characters, got %d", len(result.Layout))
+	// Test 2: Layout should be exactly 70 characters (full keyboard)
+	if len(result.Layout) != 70 {
+		t.Errorf("REGRESSION: Layout should be 70 characters, got %d", len(result.Layout))
 	}
 
-	// Test 3: Layout should contain all letters a-z
-	letterCount := make(map[rune]int)
+	// Test 3: Layout should contain full keyboard characters (letters, numbers, symbols)
+	charCount := make(map[rune]int)
 	for _, char := range result.Layout {
-		letterCount[char]++
+		charCount[char]++
 	}
 
-	if len(letterCount) != 26 {
-		t.Errorf("REGRESSION: Layout should contain 26 unique letters, got %d", len(letterCount))
+	if len(charCount) != 70 {
+		t.Errorf("REGRESSION: Layout should contain 70 unique characters, got %d", len(charCount))
 	}
 
-	for char := 'a'; char <= 'z'; char++ {
-		if letterCount[char] != 1 {
-			t.Errorf("REGRESSION: Letter '%c' appears %d times, should appear exactly once", char, letterCount[char])
+	// Test 4: All characters should appear exactly once
+	for _, count := range charCount {
+		if count != 1 {
+			t.Errorf("REGRESSION: Each character should appear exactly once, found character with count %d", count)
+
+			break
 		}
 	}
 
-	// Test 4: Fitness should be positive
+	// Test 5: Fitness should be positive
 	if result.Fitness <= 0.0 {
 		t.Errorf("REGRESSION: Fitness should be positive, got %.6f", result.Fitness)
 	}
 
-	// Test 5: Positions map should be valid
-	if len(result.Positions) != 26 {
-		t.Errorf("REGRESSION: Positions map should have 26 entries, got %d", len(result.Positions))
+	// Test 6: Positions map should be valid for full keyboard
+	if len(result.Positions) != 70 {
+		t.Errorf("REGRESSION: Positions map should have 70 entries, got %d", len(result.Positions))
 	}
 
 	// Check that positions map doesn't contain null character key
@@ -130,13 +135,14 @@ func TestMainApplicationNullCharacterRegression(t *testing.T) {
 		t.Errorf("REGRESSION: Expected multiple fitness mentions, got %d", fitnessMatches)
 	}
 
-	t.Logf("✅ Main application regression test passed")
 	t.Logf("Final fitness: %.6f", result.Fitness)
 	t.Logf("Layout: %s", result.Layout)
 }
 
 // TestMainApplicationLargeDataset tests with larger dataset (like Harry Potter scenario).
 func TestMainApplicationLargeDataset(t *testing.T) {
+	t.Parallel()
+
 	// This test may take longer, so allow for timeout
 	if testing.Short() {
 		t.Skip("Skipping large dataset test in short mode")
@@ -220,13 +226,14 @@ func TestMainApplicationLargeDataset(t *testing.T) {
 		t.Errorf("Large dataset should show multiple generations")
 	}
 
-	t.Logf("✅ Large dataset regression test passed")
 	t.Logf("Final fitness: %.6f", result.Fitness)
 	t.Logf("Layout length: %d characters", len(result.Layout))
 }
 
 // TestMainApplicationErrorHandling tests error conditions.
 func TestMainApplicationErrorHandling(t *testing.T) {
+	t.Parallel()
+
 	// Build the application
 	buildCmd := exec.Command("go", "build", "-o", "keyboardgen_test", "./cmd/keyboardgen")
 
@@ -274,12 +281,12 @@ func TestMainApplicationErrorHandling(t *testing.T) {
 	if err3 == nil {
 		t.Errorf("Expected error for invalid population size")
 	}
-
-	t.Logf("✅ Error handling tests completed")
 }
 
 // TestMainApplicationMakefile tests the Makefile targets.
 func TestMainApplicationMakefile(t *testing.T) {
+	t.Parallel()
+
 	// Test basic example
 	cmd1 := exec.Command("make", "example")
 
@@ -291,27 +298,25 @@ func TestMainApplicationMakefile(t *testing.T) {
 	// Verify the result file
 	resultFile := "examples/result.json"
 	if _, err := os.Stat(resultFile); os.IsNotExist(err) {
-		t.Errorf("Make example didn't create result file")
-	} else {
-		// Check the result file for regressions
-		resultBytes, err := os.ReadFile(resultFile)
-		if err != nil {
-			t.Fatalf("Failed to read result file: %v", err)
-		}
-
-		var result LayoutResult
-		if err := json.Unmarshal(resultBytes, &result); err != nil {
-			t.Fatalf("Failed to parse make example result: %v", err)
-		}
-
-		if strings.Contains(result.Layout, "\u0000") {
-			t.Errorf("CRITICAL REGRESSION in make example: Layout contains null characters")
-		}
-
-		if result.Fitness <= 0.0 {
-			t.Errorf("REGRESSION in make example: Invalid fitness %.6f", result.Fitness)
-		}
+		t.Fatal("Make example didn't create result file")
 	}
 
-	t.Logf("✅ Makefile integration test passed")
+	// Check the result file for regressions
+	resultBytes, err := os.ReadFile(resultFile)
+	if err != nil {
+		t.Fatalf("Failed to read result file: %v", err)
+	}
+
+	var result LayoutResult
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		t.Fatalf("Failed to parse make example result: %v", err)
+	}
+
+	if strings.Contains(result.Layout, "\u0000") {
+		t.Errorf("CRITICAL REGRESSION in make example: Layout contains null characters")
+	}
+
+	if result.Fitness <= 0.0 {
+		t.Errorf("REGRESSION in make example: Invalid fitness %.6f", result.Fitness)
+	}
 }

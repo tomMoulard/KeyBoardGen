@@ -7,7 +7,7 @@ PKG_DIR := ./...
 
 .DEFAULT_GOAL := all
 
-all: deps lint test build
+all: deps test build lint
 
 build: deps
 	mkdir -p $(BUILD_DIR)
@@ -24,7 +24,7 @@ benchmark:
 	go test -bench=. -benchmem $(PKG_DIR)
 
 lint:
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.3.1 run
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.3.1 run --fix
 
 deps:
 	go mod tidy

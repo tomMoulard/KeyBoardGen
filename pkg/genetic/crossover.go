@@ -306,7 +306,7 @@ func (c *Crossover) TwoPointCrossover(parent1, parent2 Individual) Individual {
 // ValidateChild ensures the child has a valid keyboard layout.
 func ValidateChild(child Individual) Individual {
 	if child.Charset == nil {
-		child.Charset = AlphabetOnly() // Default to alphabet
+		child.Charset = FullKeyboardCharset() // Always use full keyboard
 	}
 
 	// If already valid, return as-is

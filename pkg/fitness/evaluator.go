@@ -52,19 +52,21 @@ type FitnessWeights struct {
 	SameFingerBigrams float64 `json:"same_finger_bigrams"` // New: penalize SFBs heavily
 	LateralStretches  float64 `json:"lateral_stretches"`   // New: penalize LSBs
 	RollQuality       float64 `json:"roll_quality"`        // New: reward good rolls
+	LayerPenalty      float64 `json:"layer_penalty"`       // New: penalize modifier key usage
 }
 
 // DefaultWeights returns balanced fitness weights.
 func DefaultWeights() FitnessWeights {
 	return FitnessWeights{
-		FingerDistance:    0.15, // Reduced to make room for modern metrics
-		HandAlternation:   0.15, // Reduced
-		FingerBalance:     0.15, // Reduced
-		RowJumping:        0.1,  // Reduced
-		BigramEfficiency:  0.1,  // Reduced
+		FingerDistance:    0.12, // Reduced to make room for layer penalty
+		HandAlternation:   0.12, // Reduced
+		FingerBalance:     0.12, // Reduced
+		RowJumping:        0.08, // Reduced
+		BigramEfficiency:  0.08, // Reduced
 		SameFingerBigrams: 0.25, // High weight - SFBs are very bad
 		LateralStretches:  0.05, // Moderate weight for LSBs
 		RollQuality:       0.05, // Moderate weight for rolls
+		LayerPenalty:      0.13, // Significant weight for layer penalties
 	}
 }
 
@@ -105,6 +107,7 @@ func (fe *FitnessEvaluator) Evaluate(layout []rune, charset *genetic.CharacterSe
 	sfbPenalty := fe.calculateSameFingerBigrams(layout, charset, data, charToPos)
 	lsbPenalty := fe.calculateLateralStretches(layout, charset, data, charToPos)
 	rollScore := fe.calculateRollQuality(layout, charset, data, charToPos)
+	layerPenalty := fe.calculateLayerPenalty(layout, charset, data, charToPos)
 
 	// Weighted sum of all components (higher is better)
 	fitness := fe.weights.FingerDistance*distanceScore +
@@ -114,7 +117,8 @@ func (fe *FitnessEvaluator) Evaluate(layout []rune, charset *genetic.CharacterSe
 		fe.weights.BigramEfficiency*bigramScore +
 		fe.weights.SameFingerBigrams*sfbPenalty +
 		fe.weights.LateralStretches*lsbPenalty +
-		fe.weights.RollQuality*rollScore
+		fe.weights.RollQuality*rollScore +
+		fe.weights.LayerPenalty*layerPenalty
 
 	return fitness
 }
@@ -321,11 +325,38 @@ func (fe *FitnessEvaluator) calculateBigramEfficiency(layout []rune, charset *ge
 
 // Legacy method for backward compatibility with [26]rune layouts.
 func (fe *FitnessEvaluator) EvaluateLegacy(layout [26]rune, data genetic.KeyloggerDataInterface) float64 {
-	// Convert [26]rune to []rune with alphabet charset
-	layoutSlice := make([]rune, 26)
-	copy(layoutSlice, layout[:])
+	// Create a full keyboard layout by placing the 26 letters in first 26 positions
+	// and filling the rest with remaining characters from FullKeyboardCharset
+	fullCharset := genetic.FullKeyboardCharset()
+	fullLayout := make([]rune, 70)
 
-	return fe.Evaluate(layoutSlice, genetic.AlphabetOnly(), data)
+	// Copy the 26-character layout to the first positions
+	copy(fullLayout, layout[:])
+
+	// Fill remaining positions with non-letter characters from full charset
+	pos := 26
+	for _, char := range fullCharset.Characters {
+		if pos >= 70 {
+			break
+		}
+		// Check if this character is already in the layout (i.e., is a letter)
+		isLetter := false
+
+		for _, letter := range layout {
+			if char == letter {
+				isLetter = true
+
+				break
+			}
+		}
+
+		if !isLetter {
+			fullLayout[pos] = char
+			pos++
+		}
+	}
+
+	return fe.Evaluate(fullLayout, fullCharset, data)
 }
 
 // calculateSameFingerBigrams heavily penalizes same finger bigrams (SFBs).
@@ -490,6 +521,71 @@ func (fe *FitnessEvaluator) calculateRollQuality(layout []rune, charset *genetic
 	}
 
 	return rollScore / float64(totalBigrams)
+}
+
+// calculateLayerPenalty penalizes characters that require modifier keys.
+func (fe *FitnessEvaluator) calculateLayerPenalty(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
+	// For the basic evaluator, we'll use a simple heuristic:
+	// Penalize uppercase letters and special characters that typically require Shift
+	totalPenalty := 0.0
+	totalFreq := 0
+
+	// Characters that typically require Shift key on most layouts
+	shiftChars := map[rune]bool{
+		'A': true, 'B': true, 'C': true, 'D': true, 'E': true, 'F': true, 'G': true, 'H': true, 'I': true, 'J': true,
+		'K': true, 'L': true, 'M': true, 'N': true, 'O': true, 'P': true, 'Q': true, 'R': true, 'S': true, 'T': true,
+		'U': true, 'V': true, 'W': true, 'X': true, 'Y': true, 'Z': true,
+		'!': true, '@': true, '#': true, '$': true, '%': true, '^': true, '&': true, '*': true, '(': true, ')': true,
+		'_': true, '+': true, '{': true, '}': true, '|': true, ':': true, '"': true, '<': true, '>': true, '?': true,
+	}
+
+	// Characters that typically require AltGr or other special modifiers
+	altGrChars := map[rune]bool{
+		'€': true, '£': true, '¥': true, '©': true, '®': true, '°': true,
+	}
+
+	// Check character frequencies
+	for _, char := range charset.Characters {
+		freq := data.GetCharFreq(char)
+		if freq > 0 {
+			totalFreq += freq
+
+			if shiftChars[char] {
+				// Apply moderate penalty for Shift characters
+				totalPenalty += float64(freq) * 0.5
+			} else if altGrChars[char] {
+				// Apply higher penalty for AltGr characters
+				totalPenalty += float64(freq) * 1.0
+			}
+		}
+	}
+
+	// Check bigram penalties for consecutive modifier usage
+	for bigram, freq := range data.GetAllBigrams() {
+		if len(bigram) == 2 {
+			char1, char2 := rune(bigram[0]), rune(bigram[1])
+			totalFreq += freq
+
+			// Penalty for consecutive Shift usage (requires holding Shift)
+			if shiftChars[char1] && shiftChars[char2] {
+				totalPenalty += float64(freq) * 0.3
+			}
+
+			// Penalty for mixing modifiers
+			if (shiftChars[char1] && altGrChars[char2]) || (altGrChars[char1] && shiftChars[char2]) {
+				totalPenalty += float64(freq) * 0.7
+			}
+		}
+	}
+
+	if totalFreq == 0 {
+		return 1.0 // Perfect score if no data
+	}
+
+	// Normalize penalty and invert (lower penalty = higher score)
+	normalizedPenalty := totalPenalty / float64(totalFreq)
+
+	return 1.0 / (1.0 + normalizedPenalty)
 }
 
 // rateBigramEfficiency rates how efficient a finger combination is.

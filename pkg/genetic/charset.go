@@ -77,40 +77,12 @@ func (cs *CharacterSet) IsValid(layout []rune) bool {
 	return len(seen) == cs.Size
 }
 
-// Predefined character sets
-
-// AlphabetOnly returns a character set with only lowercase letters a-z.
-func AlphabetOnly() *CharacterSet {
-	chars := []rune("abcdefghijklmnopqrstuvwxyz")
-
-	return NewCharacterSet("alphabet", chars)
-}
-
-// AlphabetWithNumbers returns letters and numbers.
-func AlphabetWithNumbers() *CharacterSet {
-	chars := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-
-	return NewCharacterSet("alphanumeric", chars)
-}
-
-// ProgrammingCharset returns letters, numbers, and common programming symbols.
-func ProgrammingCharset() *CharacterSet {
-	// Include common programming symbols
-	alphabet := "abcdefghijklmnopqrstuvwxyz"
-	numbers := "0123456789"
-	symbols := "!@#$%^&*()_+-=[]{}|;':\",./<>?`~"
-
-	chars := []rune(alphabet + numbers + symbols)
-
-	return NewCharacterSet("programming", chars)
-}
-
 // FullKeyboardCharset returns the complete keyboard character set.
 func FullKeyboardCharset() *CharacterSet {
 	// Complete US QWERTY keyboard layout
 	alphabet := "abcdefghijklmnopqrstuvwxyz"
 	numbers := "0123456789"
-	symbols := "!@#$%^&*()_+-=[]{}\\|;':\",./<>?`~ "
+	symbols := "!@#$%^&*()_+-=[]{}\\|;':\",./<>?` ~\t" // TODO: include \n
 
 	chars := []rune(alphabet + numbers + symbols)
 
@@ -133,31 +105,3 @@ func CustomCharset(name, charString string) *CharacterSet {
 
 	return NewCharacterSet(name, uniqueChars)
 }
-
-// GetCharsetByName returns a predefined character set by name.
-func GetCharsetByName(name string) *CharacterSet {
-	switch name {
-	case "alphabet":
-		return AlphabetOnly()
-	case "alphanumeric":
-		return AlphabetWithNumbers()
-	case "programming":
-		return ProgrammingCharset()
-	case "full", "full_keyboard":
-		return FullKeyboardCharset()
-	default:
-		return AlphabetOnly() // Default fallback
-	}
-}
-
-// Common character groups for reference.
-var (
-	Letters      = "abcdefghijklmnopqrstuvwxyz"
-	Numbers      = "0123456789"
-	BasicSymbols = "!@#$%^&*()"
-	Punctuation  = ".,;:'\""
-	Brackets     = "()[]{}"
-	Operators    = "+-=*/<>?|&^%"
-	Special      = "`~_\\#"
-	Space        = " "
-)

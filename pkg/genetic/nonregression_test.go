@@ -47,7 +47,8 @@ func TestIndividualNotNull(t *testing.T) {
 				t.Errorf("Null character found at position %d in individual %d", pos, i)
 			}
 
-			if char < 'a' || char > 'z' {
+			// Character validation now handles full keyboard charset
+			if !FullKeyboardCharset().Contains(char) {
 				t.Errorf("Invalid character '%c' at position %d in individual %d", char, pos, i)
 			}
 		}
@@ -63,8 +64,8 @@ func TestIndividualNotNull(t *testing.T) {
 			seen[char] = true
 		}
 
-		if len(seen) != 26 {
-			t.Errorf("Individual %d missing letters, only has %d unique chars", i, len(seen))
+		if len(seen) != 70 {
+			t.Errorf("Individual %d missing characters, only has %d unique chars (expected 70)", i, len(seen))
 		}
 	}
 }
@@ -125,7 +126,7 @@ func TestBestIndividualInitialization(t *testing.T) {
 	config.PopulationSize = 5
 	config.MaxGenerations = 3
 
-	ga := NewParallelGA(mockEvaluator, config)
+	ga := NewParallelGA(mockEvaluator, config, FullKeyboardCharset())
 
 	// Create mock sample data
 	keyloggerData := &MockKeyloggerData{
@@ -205,7 +206,7 @@ func (m *MockFitnessEvaluator) EvaluateLegacy(layout [26]rune, data KeyloggerDat
 	layoutSlice := make([]rune, 26)
 	copy(layoutSlice, layout[:])
 
-	charset := AlphabetOnly()
+	charset := FullKeyboardCharset()
 
 	return m.Evaluate(layoutSlice, charset, data)
 }
@@ -289,8 +290,8 @@ func TestDisplayHandlesNullCharacters(t *testing.T) {
 	}
 
 	// The string should contain null characters
-	if len(layoutString) != 26 {
-		t.Errorf("Layout string length should be 26, got %d", len(layoutString))
+	if len(layoutString) != 70 {
+		t.Errorf("Layout string length should be 70, got %d", len(layoutString))
 	}
 
 	t.Log("Display null character handling test passed")
@@ -332,7 +333,7 @@ func TestGeneticAlgorithmEvolution(t *testing.T) {
 		ParallelWorkers: 4,
 	}
 
-	ga := NewParallelGA(evaluator, config)
+	ga := NewParallelGA(evaluator, config, FullKeyboardCharset())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -465,7 +466,7 @@ func TestNullCharacterRegressionFullPipeline(t *testing.T) {
 	// Use mock evaluator
 	evaluator := &MockFitnessEvaluator{}
 
-	ga := NewParallelGA(evaluator, config)
+	ga := NewParallelGA(evaluator, config, FullKeyboardCharset())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

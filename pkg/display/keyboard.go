@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/tommoulard/keyboardgen/pkg/fitness"
 	"github.com/tommoulard/keyboardgen/pkg/genetic"
 )
 
@@ -49,6 +50,125 @@ func (kd *KeyboardDisplay) PrintLayout(individual genetic.Individual, data Keylo
 	} else {
 		kd.printFullLayout(individual, data)
 	}
+}
+
+// PrintLayeredLayout displays the optimized layout with all layers.
+func (kd *KeyboardDisplay) PrintLayeredLayout(individual genetic.Individual, data KeyloggerDataInterface, layoutName string) {
+	// Create an optimized keyboard layout from the individual
+	optimizedLayout := kd.CreateOptimizedLayeredLayout(individual)
+
+	// Create layered display and show the optimized layout
+	layeredDisplay := NewLayeredKeyboardDisplay(optimizedLayout)
+	layeredDisplay.SetOptions(kd.showFrequency, kd.showColors, kd.compact)
+	layeredDisplay.PrintLayeredLayout(data)
+	layeredDisplay.PrintLayerStatistics(data)
+}
+
+// CreateOptimizedLayeredLayout creates a keyboard layout from the optimized individual.
+func (kd *KeyboardDisplay) CreateOptimizedLayeredLayout(individual genetic.Individual) *fitness.KeyboardLayout {
+	layout := &fitness.KeyboardLayout{
+		Name: "Optimized",
+		Keys: make(map[int]fitness.LayeredKey),
+	}
+
+	// The user's requirement: each character appears exactly once across ALL layers
+	// With a 70-character charset, we can only fill 70 positions total, not 140 (base + shift)
+
+	baseChars := make([]rune, len(individual.Layout))
+	shiftChars := make([]rune, len(individual.Layout))
+
+	// Step 1: Process all positions in the optimized layout
+	usedChars := make(map[rune]bool)
+	letterPositions := make([]int, 0)
+	nonLetterPositions := make([]int, 0)
+
+	for pos, char := range individual.Layout {
+		if pos >= len(individual.Layout) { // Safety check
+			break
+		}
+
+		baseChars[pos] = char
+		usedChars[char] = true
+
+		if char >= 'a' && char <= 'z' {
+			letterPositions = append(letterPositions, pos)
+		} else {
+			nonLetterPositions = append(nonLetterPositions, pos)
+		}
+	}
+
+	// Step 2: Handle letters - they get uppercase versions in shift layer
+	for _, pos := range letterPositions {
+		char := baseChars[pos]
+		upperChar := char - 'a' + 'A'
+		shiftChars[pos] = upperChar
+		usedChars[upperChar] = true
+	}
+
+	// Step 3: Handle non-letters in shift layer
+	// We need to find unused characters from the charset for non-letter shift positions
+	if individual.Charset != nil {
+		availableChars := make([]rune, 0)
+
+		for _, char := range individual.Charset.Characters {
+			if !usedChars[char] {
+				availableChars = append(availableChars, char)
+			}
+		}
+
+		// Assign available characters to non-letter shift positions
+		for i, pos := range nonLetterPositions {
+			if i < len(availableChars) {
+				selectedChar := availableChars[i]
+				shiftChars[pos] = selectedChar
+				usedChars[selectedChar] = true
+			} else {
+				// If we run out of unique characters, leave shift position empty (no character)
+				// This satisfies the "each character appears exactly once" constraint
+				shiftChars[pos] = 0 // 0 means no character assigned
+			}
+		}
+	} else {
+		// Fallback: leave non-letters empty in shift layer to avoid duplication
+		for _, pos := range nonLetterPositions {
+			shiftChars[pos] = 0 // No character assigned
+		}
+	}
+
+	// Step 4: Create LayeredKey objects
+	for pos := range individual.Layout {
+		if pos >= len(individual.Layout) { // Safety check
+			break
+		}
+
+		layeredKey := fitness.LayeredKey{
+			BaseChar:  baseChars[pos],
+			ShiftChar: shiftChars[pos],
+		}
+
+		// Add some AltGr characters for common positions (optional, only if not already used)
+		switch pos {
+		case 3: // Position for €
+			if !usedChars['€'] {
+				euro := '€'
+				layeredKey.AltGrChar = &euro
+			}
+		case 14: // Position for ™
+			if !usedChars['™'] {
+				tm := '™'
+				layeredKey.AltGrChar = &tm
+			}
+		case 23: // Position for °
+			if !usedChars['°'] {
+				degree := '°'
+				layeredKey.AltGrChar = &degree
+			}
+		}
+
+		layout.Keys[pos] = layeredKey
+	}
+
+	return layout
 }
 
 // printFullLayout displays the full graphical keyboard.
@@ -192,7 +312,7 @@ func (kd *KeyboardDisplay) PrintStatistics(individual genetic.Individual, data K
 	}
 
 	fmt.Printf("\n╔═══════════════════════════════════════════════════════════════════╗\n")
-	fmt.Printf("║                          LAYOUT ANALYSIS                         ║\n")
+	fmt.Printf("║                          LAYOUT ANALYSIS                          ║\n")
 	fmt.Printf("╚═══════════════════════════════════════════════════════════════════╝\n")
 
 	// Basic layout information
@@ -527,7 +647,7 @@ func (kd *KeyboardDisplay) calculateBigramEfficiency(bigram string, individual g
 // analyzeErgonomicMetrics displays detailed analysis of modern typing comfort metrics.
 func (kd *KeyboardDisplay) analyzeErgonomicMetrics(individual genetic.Individual, data KeyloggerDataInterface) {
 	fmt.Printf("\n╔═══════════════════════════════════════════════════════════════════╗\n")
-	fmt.Printf("║                     ERGONOMIC ANALYSIS                           ║\n")
+	fmt.Printf("║                     ERGONOMIC ANALYSIS                            ║\n")
 	fmt.Printf("╚═══════════════════════════════════════════════════════════════════╝\n")
 
 	// Calculate SFBs
@@ -916,7 +1036,7 @@ func (kd *KeyboardDisplay) PrintComparisonWithEvaluator(individual genetic.Indiv
 	}
 
 	fmt.Printf("\n╔═══════════════════════════════════════════════════════════════════╗\n")
-	fmt.Printf("║                      LAYOUT COMPARISON                           ║\n")
+	fmt.Printf("║                      LAYOUT COMPARISON                            ║\n")
 	fmt.Printf("╚═══════════════════════════════════════════════════════════════════╝\n")
 
 	// Calculate QWERTY fitness if evaluator is provided
@@ -963,7 +1083,7 @@ func (kd *KeyboardDisplay) PrintComparisonWithEvaluator(individual genetic.Indiv
 			}
 		}
 
-		fmt.Print(strings.Repeat(" ", 33-len(row)*2))
+		fmt.Print(strings.Repeat(" ", 32-len(row)*2))
 
 		fmt.Print("│ ")
 
@@ -976,7 +1096,7 @@ func (kd *KeyboardDisplay) PrintComparisonWithEvaluator(individual genetic.Indiv
 			}
 		}
 
-		fmt.Print(strings.Repeat(" ", 33-len(row)*2))
+		fmt.Print(strings.Repeat(" ", 32-len(row)*2))
 		fmt.Println("│")
 	}
 
@@ -1234,7 +1354,7 @@ func (kd *KeyboardDisplay) SaveLayoutImage(individual genetic.Individual, filena
 // PrintSummary prints a concise summary of the optimization results.
 func (kd *KeyboardDisplay) PrintSummary(individual genetic.Individual, data KeyloggerDataInterface, evaluator FitnessEvaluator) {
 	fmt.Printf("\n╔═══════════════════════════════════════════════════════════════════╗\n")
-	fmt.Printf("║                        OPTIMIZATION SUMMARY                      ║\n")
+	fmt.Printf("║                        OPTIMIZATION SUMMARY                       ║\n")
 	fmt.Printf("╚═══════════════════════════════════════════════════════════════════╝\n")
 
 	alternationCount := kd.calculateHandAlternation(individual, data)

@@ -27,8 +27,8 @@ func TestFitnessEvaluatorNullCharacterRegression(t *testing.T) {
 	evaluator := NewFitnessEvaluator(geometry, weights)
 
 	// Test Case 1: The original bug - all null characters should get 0.0 fitness
-	nullLayout := make([]rune, 26) // All zero values = null characters
-	charset := genetic.AlphabetOnly()
+	nullLayout := make([]rune, 70) // All zero values = null characters
+	charset := genetic.FullKeyboardCharset()
 
 	nullFitness := evaluator.Evaluate(nullLayout, charset, keyloggerData)
 
