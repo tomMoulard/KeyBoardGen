@@ -427,21 +427,8 @@ func CreateDiversePopulation(size int, data KeyloggerDataInterface) Population {
 
 // Run executes the genetic algorithm.
 func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, callback func(generation int, best Individual)) (Individual, error) {
-	return pga.RunWithDiverseInit(ctx, data, callback, false)
-}
-
-// RunWithDiverseInit executes the genetic algorithm with optional diverse initialization.
-func (pga *ParallelGA) RunWithDiverseInit(ctx context.Context, data KeyloggerDataInterface, callback func(generation int, best Individual), diverseInit bool) (Individual, error) {
 	// Initialize population
-	var population Population
-	if diverseInit {
-		population = CreateDiversePopulation(pga.config.PopulationSize, data)
-	} else {
-		population = make(Population, pga.config.PopulationSize)
-		for i := range population {
-			population[i] = NewRandomIndividual()
-		}
-	}
+	population := CreateDiversePopulation(pga.config.PopulationSize, data)
 
 	// Evaluate initial population fitness
 	err := pga.evolver.evaluator.EvaluatePopulation(ctx, population, data)
