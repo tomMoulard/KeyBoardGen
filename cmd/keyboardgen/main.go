@@ -24,7 +24,6 @@ type Config struct {
 	InputFile      string  `json:"input_file"`
 	OutputFile     string  `json:"output_file"`
 	ConfigFile     string  `json:"config_file"`
-	CharacterSet   string  `json:"character_set"` // "alphabet", "alphanumeric", "programming", "full"
 	PopulationSize int     `json:"population_size"`
 	MaxGeneration  int     `json:"max_generation"`
 	MutationRate   float64 `json:"mutation_rate"`
@@ -43,7 +42,6 @@ func DefaultAppConfig() Config {
 		InputFile:      "",
 		OutputFile:     "best_layout.json",
 		ConfigFile:     "",
-		CharacterSet:   "alphabet",
 		PopulationSize: 100,
 		MaxGeneration:  1000,
 		MutationRate:   0.1,
@@ -111,7 +109,6 @@ func parseFlags() Config {
 	flag.StringVar(&config.InputFile, "input", "", "Input keylogger file (required)")
 	flag.StringVar(&config.OutputFile, "output", config.OutputFile, "Output file for best layout")
 	flag.StringVar(&config.ConfigFile, "config", "", "Configuration file (JSON)")
-	flag.StringVar(&config.CharacterSet, "charset", config.CharacterSet, "Character set: alphabet, alphanumeric, programming, full")
 	flag.IntVar(&config.PopulationSize, "population", config.PopulationSize, "Population size")
 	flag.IntVar(&config.MaxGeneration, "generations", config.MaxGeneration, "Maximum generations")
 	flag.Float64Var(&config.MutationRate, "mutation", config.MutationRate, "Mutation rate")
@@ -193,20 +190,8 @@ func runGA(ctx context.Context, appConfig Config) error {
 
 	klparser := parser.NewKeyloggerParser()
 
-	// Choose parser configuration based on character set
-	var parseConfig parser.ParseConfig
-
-	switch appConfig.CharacterSet {
-	case "programming":
-		parseConfig = parser.ProgrammingConfig()
-	case "full", "full_keyboard":
-		parseConfig = parser.FullKeyboardConfig()
-	default:
-		parseConfig = parser.DefaultConfig()
-	}
-
-	// Set character set in config
-	parseConfig.CharacterSet = appConfig.CharacterSet
+	// Always use full keyboard configuration
+	parseConfig := parser.FullKeyboardConfig()
 
 	// Detect format based on file extension or content
 	if strings.HasSuffix(strings.ToLower(appConfig.InputFile), ".json") {
@@ -245,8 +230,8 @@ func runGA(ctx context.Context, appConfig Config) error {
 		fmt.Println()
 	}
 
-	// Set up fitness evaluation with appropriate geometry for character set
-	charset := genetic.GetCharsetByName(appConfig.CharacterSet)
+	// Set up fitness evaluation with full keyboard character set
+	charset := genetic.FullKeyboardCharset()
 	geometry := fitness.GetGeometryForCharset(charset)
 	weights := fitness.DefaultWeights()
 	fitnessEvaluator := fitness.NewFitnessEvaluator(geometry, weights)
