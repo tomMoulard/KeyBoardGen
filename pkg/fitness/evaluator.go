@@ -53,20 +53,31 @@ type FitnessWeights struct {
 	LateralStretches  float64 `json:"lateral_stretches"`   // New: penalize LSBs
 	RollQuality       float64 `json:"roll_quality"`        // New: reward good rolls
 	LayerPenalty      float64 `json:"layer_penalty"`       // New: penalize modifier key usage
+	// Enhanced KPI-based components
+	HomeRowBonus     float64 `json:"home_row_bonus"`    // New: reward home row usage
+	RollRatioTarget  float64 `json:"roll_ratio_target"` // New: optimize roll percentage
+	ThresholdBonuses float64 `json:"threshold_bonuses"` // New: bonus for crossing thresholds
+	PositionMatching float64 `json:"position_matching"` // New: match frequency to ergonomics
 }
 
 // DefaultWeights returns balanced fitness weights.
 func DefaultWeights() FitnessWeights {
 	return FitnessWeights{
-		FingerDistance:    0.12, // Reduced to make room for layer penalty
-		HandAlternation:   0.12, // Reduced
-		FingerBalance:     0.12, // Reduced
-		RowJumping:        0.08, // Reduced
-		BigramEfficiency:  0.08, // Reduced
-		SameFingerBigrams: 0.25, // High weight - SFBs are very bad
-		LateralStretches:  0.05, // Moderate weight for LSBs
-		RollQuality:       0.05, // Moderate weight for rolls
-		LayerPenalty:      0.13, // Significant weight for layer penalties
+		// Core components (reduced to make room for new KPI components)
+		FingerDistance:    0.10, // Reduced to make room for new components
+		HandAlternation:   0.10, // Reduced
+		FingerBalance:     0.10, // Reduced
+		RowJumping:        0.06, // Reduced
+		BigramEfficiency:  0.06, // Reduced
+		SameFingerBigrams: 0.20, // High weight - SFBs are very bad
+		LateralStretches:  0.04, // Moderate weight for LSBs
+		RollQuality:       0.04, // Moderate weight for rolls
+		LayerPenalty:      0.10, // Significant weight for layer penalties
+		// Enhanced KPI components
+		HomeRowBonus:     0.08, // Reward home row optimization
+		RollRatioTarget:  0.04, // Target roll percentage optimization
+		ThresholdBonuses: 0.04, // Bonus rewards for crossing key thresholds
+		PositionMatching: 0.04, // Match high-frequency chars to ergonomic positions
 	}
 }
 
@@ -109,6 +120,12 @@ func (fe *FitnessEvaluator) Evaluate(layout []rune, charset *genetic.CharacterSe
 	rollScore := fe.calculateRollQuality(layout, charset, data, charToPos)
 	layerPenalty := fe.calculateLayerPenalty(layout, charset, data, charToPos)
 
+	// Enhanced KPI-based components
+	homeRowScore := fe.calculateHomeRowBonus(layout, charset, data, charToPos)
+	rollRatioScore := fe.calculateRollRatioTarget(layout, charset, data, charToPos)
+	thresholdBonus := fe.calculateThresholdBonuses(layout, charset, data, charToPos, alternationScore, rollScore)
+	positionScore := fe.calculatePositionMatching(layout, charset, data, charToPos)
+
 	// Weighted sum of all components (higher is better)
 	fitness := fe.weights.FingerDistance*distanceScore +
 		fe.weights.HandAlternation*alternationScore +
@@ -118,7 +135,12 @@ func (fe *FitnessEvaluator) Evaluate(layout []rune, charset *genetic.CharacterSe
 		fe.weights.SameFingerBigrams*sfbPenalty +
 		fe.weights.LateralStretches*lsbPenalty +
 		fe.weights.RollQuality*rollScore +
-		fe.weights.LayerPenalty*layerPenalty
+		fe.weights.LayerPenalty*layerPenalty +
+		// Enhanced KPI components
+		fe.weights.HomeRowBonus*homeRowScore +
+		fe.weights.RollRatioTarget*rollRatioScore +
+		fe.weights.ThresholdBonuses*thresholdBonus +
+		fe.weights.PositionMatching*positionScore
 
 	return fitness
 }
@@ -464,9 +486,9 @@ func (fe *FitnessEvaluator) calculateLateralStretches(layout []rune, charset *ge
 	return 1.0 - lsbRate
 }
 
-// calculateRollQuality rewards smooth rolling motions.
+// calculateRollQuality rewards smooth rolling motions using total roll rate.
 func (fe *FitnessEvaluator) calculateRollQuality(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
-	rollScore := 0.0
+	rollCount := 0
 	totalBigrams := 0
 
 	for bigram, freq := range data.GetAllBigrams() {
@@ -500,19 +522,7 @@ func (fe *FitnessEvaluator) calculateRollQuality(layout []rune, charset *genetic
 		sameRow := math.Abs(coord1[1]-coord2[1]) < 0.3
 
 		if sameHand && adjacentFingers && sameRow {
-			// Inward rolls are better than outward rolls
-			isInward := false
-			if finger1 < 4 && finger2 < 4 { // Left hand
-				isInward = finger1 < finger2 // Rolling from pinky toward index
-			} else if finger1 >= 4 && finger2 >= 4 { // Right hand
-				isInward = finger1 > finger2 // Rolling from index toward pinky
-			}
-
-			if isInward {
-				rollScore += float64(freq) * 0.8 // Good inward roll
-			} else {
-				rollScore += float64(freq) * 0.4 // Okay outward roll
-			}
+			rollCount += freq // Count all rolls (inward + outward)
 		}
 	}
 
@@ -520,7 +530,18 @@ func (fe *FitnessEvaluator) calculateRollQuality(layout []rune, charset *genetic
 		return 0.0
 	}
 
-	return rollScore / float64(totalBigrams)
+	// Calculate total roll rate like the analysis does
+	totalRollRate := float64(rollCount) / float64(totalBigrams)
+
+	// Score based on analysis thresholds: >30% = EXCELLENT, >15% = GOOD, <15% = POOR
+	if totalRollRate > 0.3 {
+		return 1.0 // EXCELLENT
+	} else if totalRollRate > 0.15 {
+		return 0.7 // GOOD
+	} else {
+		// Scale POOR linearly: 0% = 0.0, 15% = 0.4
+		return totalRollRate / 0.15 * 0.4
+	}
 }
 
 // calculateLayerPenalty penalizes characters that require modifier keys.
@@ -608,4 +629,235 @@ func rateBigramEfficiency(finger1, finger2 int) float64 {
 
 	// Other combinations = moderate
 	return 0.6
+}
+
+// calculateHomeRowBonus rewards placing high-frequency characters on the home row.
+func (fe *FitnessEvaluator) calculateHomeRowBonus(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
+	homeRowPositions := map[int]bool{
+		10: true, 11: true, 12: true, 13: true, 14: true, // Left home row
+		15: true, 16: true, 17: true, 18: true, // Right home row
+	}
+
+	totalHomeRowFreq := 0
+	totalFreq := 0
+
+	// Calculate frequency of characters on home row
+	for _, char := range charset.Characters {
+		freq := data.GetCharFreq(char)
+		if freq > 0 {
+			totalFreq += freq
+
+			if pos, exists := charToPos[char]; exists {
+				if homeRowPositions[pos] {
+					totalHomeRowFreq += freq
+				}
+			}
+		}
+	}
+
+	if totalFreq == 0 {
+		return 0.0
+	}
+
+	homeRowUsage := float64(totalHomeRowFreq) / float64(totalFreq)
+
+	// Bonus scoring based on home row usage thresholds (matching analysis display)
+	if homeRowUsage > 0.4 {
+		// OPTIMIZED: >40% home row usage gets full bonus plus extra
+		return 1.0 + (homeRowUsage-0.4)*2.0 // Max 2.2 score for 50%+ usage
+	} else if homeRowUsage > 0.3 {
+		// Good usage gets proportional bonus
+		return homeRowUsage / 0.4 // Scale 0.75-1.0
+	} else {
+		// SUBOPTIMAL: <30% gets penalized
+		return homeRowUsage / 0.4 * 0.5 // Scale 0-0.375
+	}
+}
+
+// calculateRollRatioTarget optimizes for ideal roll percentage of same-hand bigrams.
+func (fe *FitnessEvaluator) calculateRollRatioTarget(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
+	sameHandBigrams := 0
+	rollBigrams := 0
+
+	for bigram, freq := range data.GetAllBigrams() {
+		if len(bigram) != 2 {
+			continue
+		}
+
+		char1, char2 := rune(bigram[0]), rune(bigram[1])
+		pos1, exists1 := charToPos[char1]
+		pos2, exists2 := charToPos[char2]
+
+		if !exists1 || !exists2 {
+			continue
+		}
+
+		finger1, ok1 := fe.geometry.FingerMap[pos1]
+		finger2, ok2 := fe.geometry.FingerMap[pos2]
+		coord1, ok3 := fe.geometry.KeyPositions[pos1]
+		coord2, ok4 := fe.geometry.KeyPositions[pos2]
+
+		if !ok1 || !ok2 || !ok3 || !ok4 {
+			continue
+		}
+
+		// Check if same hand
+		sameHand := (finger1 < 4 && finger2 < 4) || (finger1 >= 4 && finger2 >= 4)
+		if !sameHand {
+			continue
+		}
+
+		sameHandBigrams += freq
+
+		// Check for rolling motion
+		adjacentFingers := math.Abs(float64(finger1-finger2)) == 1
+		sameRow := math.Abs(coord1[1]-coord2[1]) < 0.3
+
+		if adjacentFingers && sameRow {
+			rollBigrams += freq
+		}
+	}
+
+	if sameHandBigrams == 0 {
+		return 0.0
+	}
+
+	rollRatio := float64(rollBigrams) / float64(sameHandBigrams)
+
+	// Target roll ratio of 35% (based on ergonomic research)
+	targetRatio := 0.35
+	deviation := math.Abs(rollRatio - targetRatio)
+
+	// Score decreases as we deviate from target
+	return math.Max(0.0, 1.0-deviation*2.0)
+}
+
+// calculateThresholdBonuses provides bonus rewards for crossing key ergonomic thresholds.
+func (fe *FitnessEvaluator) calculateThresholdBonuses(
+	layout []rune,
+	charset *genetic.CharacterSet,
+	data genetic.KeyloggerDataInterface,
+	charToPos map[rune]int,
+	alternationScore, rollScore float64,
+) float64 {
+	bonusScore := 0.0
+
+	// Hand alternation threshold bonuses (based on analysis categories)
+	if alternationScore > 0.6 {
+		bonusScore += 1.0 // EXCELLENT bonus
+	} else if alternationScore > 0.45 {
+		bonusScore += 0.6 // GOOD bonus
+	} else if alternationScore > 0.3 {
+		bonusScore += 0.3 // MODERATE bonus
+	}
+
+	// Roll quality threshold bonus
+	if rollScore > 0.4 {
+		bonusScore += 0.8 // High roll frequency bonus
+	} else if rollScore > 0.2 {
+		bonusScore += 0.4 // Moderate roll frequency bonus
+	}
+
+	// Calculate SFB rate for threshold bonus
+	sfbCount := 0
+	totalBigrams := 0
+
+	for bigram, freq := range data.GetAllBigrams() {
+		if len(bigram) != 2 {
+			continue
+		}
+
+		char1, char2 := rune(bigram[0]), rune(bigram[1])
+		pos1, exists1 := charToPos[char1]
+		pos2, exists2 := charToPos[char2]
+
+		if !exists1 || !exists2 {
+			continue
+		}
+
+		finger1, ok1 := fe.geometry.FingerMap[pos1]
+		finger2, ok2 := fe.geometry.FingerMap[pos2]
+
+		if !ok1 || !ok2 {
+			continue
+		}
+
+		totalBigrams += freq
+		if finger1 == finger2 {
+			sfbCount += freq
+		}
+	}
+
+	if totalBigrams > 0 {
+		sfbRate := float64(sfbCount) / float64(totalBigrams)
+		// SFB threshold bonuses
+		if sfbRate < 0.02 {
+			bonusScore += 1.0 // EXCELLENT SFB rate
+		} else if sfbRate < 0.05 {
+			bonusScore += 0.5 // GOOD SFB rate
+		}
+	}
+
+	// Normalize bonus score (max possible: ~3.0)
+	return bonusScore / 3.0
+}
+
+// calculatePositionMatching rewards placing high-frequency characters in ergonomic positions.
+func (fe *FitnessEvaluator) calculatePositionMatching(layout []rune, charset *genetic.CharacterSet, data genetic.KeyloggerDataInterface, charToPos map[rune]int) float64 {
+	// Define ergonomic scores for each position (higher = more ergonomic)
+	ergonomicScores := map[int]float64{
+		// Home row (most ergonomic)
+		13: 1.0, 14: 1.0, 15: 1.0, 16: 1.0, // Index and middle fingers
+		12: 0.9, 17: 0.9, // Ring fingers
+		11: 0.7, 18: 0.7, // Pinky fingers
+		10: 0.6, // Left pinky home
+
+		// Top row (moderately ergonomic)
+		3: 0.8, 4: 0.8, 5: 0.8, 6: 0.8, // Index and middle
+		2: 0.7, 7: 0.7, // Ring
+		1: 0.5, 8: 0.5, 9: 0.5, // Pinky and edges
+		0: 0.4, // Far left
+
+		// Bottom row (less ergonomic)
+		22: 0.6, 23: 0.6, 24: 0.6, // Index and middle
+		21: 0.5, 25: 0.5, // Ring and right pinky
+		20: 0.4, // Left ring
+		19: 0.3, // Left pinky
+	}
+
+	// Get character frequencies and sort them
+	type charFreq struct {
+		char rune
+		freq int
+	}
+
+	var frequencies []charFreq
+
+	totalScore := 0.0
+	totalWeight := 0.0
+
+	for _, char := range charset.Characters {
+		freq := data.GetCharFreq(char)
+		if freq > 0 {
+			frequencies = append(frequencies, charFreq{char, freq})
+		}
+	}
+
+	// Calculate weighted ergonomic score based on frequency-position matching
+	for _, cf := range frequencies {
+		if pos, exists := charToPos[cf.char]; exists {
+			if ergScore, hasErg := ergonomicScores[pos]; hasErg {
+				weight := float64(cf.freq)
+				totalScore += ergScore * weight
+				totalWeight += weight
+			}
+		}
+	}
+
+	if totalWeight == 0 {
+		return 0.0
+	}
+
+	// Return average ergonomic score weighted by character frequency
+	return totalScore / totalWeight
 }
