@@ -21,38 +21,45 @@ type Population []Individual
 
 // Config holds genetic algorithm configuration.
 type Config struct {
-	PopulationSize  int     `json:"population_size"`
-	MaxGenerations  int     `json:"max_generations"`
-	MutationRate    float64 `json:"mutation_rate"`
-	CrossoverRate   float64 `json:"crossover_rate"`
-	ElitismCount    int     `json:"elitism_count"`
-	TournamentSize  int     `json:"tournament_size"`
-	ParallelWorkers int     `json:"parallel_workers"`
+	PopulationSize     int     `json:"population_size"`
+	MaxGenerations     int     `json:"max_generations"` // 0 means unlimited
+	MutationRate       float64 `json:"mutation_rate"`
+	CrossoverRate      float64 `json:"crossover_rate"`
+	ElitismCount       int     `json:"elitism_count"`
+	TournamentSize     int     `json:"tournament_size"`
+	ParallelWorkers    int     `json:"parallel_workers"`
+	// Convergence-based stopping
+	ConvergenceStops   int     `json:"convergence_stops"`     // Stop after N generations with same fitness (0 = disabled)
+	ConvergenceTolerance float64 `json:"convergence_tolerance"` // Fitness difference tolerance for convergence
 }
 
 // DefaultConfig returns a sensible default configuration.
 func DefaultConfig() Config {
 	return Config{
-		PopulationSize:  100,
-		MaxGenerations:  1000,
-		MutationRate:    0.1,
-		CrossoverRate:   0.8,
-		ElitismCount:    5,
-		TournamentSize:  3,
-		ParallelWorkers: 4,
+		PopulationSize:       100,
+		MaxGenerations:       1000,
+		MutationRate:         0.1,
+		CrossoverRate:        0.8,
+		ElitismCount:         5,
+		TournamentSize:       3,
+		ParallelWorkers:      4,
+		ConvergenceStops:     0,       // Disabled by default
+		ConvergenceTolerance: 0.000001, // Very small tolerance
 	}
 }
 
 // LargeDatasetConfig returns configuration optimized for large datasets.
 func LargeDatasetConfig() Config {
 	return Config{
-		PopulationSize:  500, // Much larger population for diversity
-		MaxGenerations:  100, // Fewer generations but larger population
-		MutationRate:    0.3, // Higher mutation for exploration
-		CrossoverRate:   0.9, // High crossover for mixing
-		ElitismCount:    2,   // Very low elitism to prevent dominance
-		TournamentSize:  7,   // Larger tournaments for better selection pressure
-		ParallelWorkers: 8,   // More workers for larger population
+		PopulationSize:       500, // Much larger population for diversity
+		MaxGenerations:       100, // Fewer generations but larger population
+		MutationRate:         0.3, // Higher mutation for exploration
+		CrossoverRate:        0.9, // High crossover for mixing
+		ElitismCount:         2,   // Very low elitism to prevent dominance
+		TournamentSize:       7,   // Larger tournaments for better selection pressure
+		ParallelWorkers:      8,   // More workers for larger population
+		ConvergenceStops:     0,       // Disabled by default
+		ConvergenceTolerance: 0.00001, // Slightly larger tolerance for large datasets
 	}
 }
 
@@ -62,13 +69,15 @@ func AdaptiveConfig(dataSize int) Config {
 		return LargeDatasetConfig()
 	} else if dataSize > 10000 { // Medium dataset
 		return Config{
-			PopulationSize:  200,
-			MaxGenerations:  200,
-			MutationRate:    0.2,
-			CrossoverRate:   0.85,
-			ElitismCount:    3,
-			TournamentSize:  5,
-			ParallelWorkers: 6,
+			PopulationSize:       200,
+			MaxGenerations:       200,
+			MutationRate:         0.2,
+			CrossoverRate:        0.85,
+			ElitismCount:         3,
+			TournamentSize:       5,
+			ParallelWorkers:      6,
+			ConvergenceStops:     0,       // Disabled by default
+			ConvergenceTolerance: 0.000001, // Very small tolerance
 		}
 	} else { // Small dataset
 		return DefaultConfig()

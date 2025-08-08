@@ -2,6 +2,7 @@ package genetic
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -441,8 +442,18 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 
 	bestFitness := -1.0
 	bestInitialized := false
+	
+	// Convergence tracking
+	var lastBestFitness float64 = -1.0
+	convergenceCount := 0
+	
+	// Determine loop limit: use MaxGenerations if > 0, otherwise unlimited (but with convergence)
+	maxGens := pga.config.MaxGenerations
+	if maxGens == 0 && pga.config.ConvergenceStops > 0 {
+		maxGens = int(^uint(0) >> 1) // Max int value for unlimited generations
+	}
 
-	for generation := range pga.config.MaxGenerations {
+	for generation := range maxGens {
 		select {
 		case <-ctx.Done():
 			return bestIndividual, ctx.Err()
@@ -469,6 +480,27 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 				bestIndividual = individual.Clone()
 				bestIndividual.Age = generation // Update age when we find a better individual
 			}
+		}
+
+		// Check for convergence based on fitness stagnation
+		if pga.config.ConvergenceStops > 0 {
+			if lastBestFitness >= 0 { // Not the first generation
+				fitnessChange := math.Abs(bestFitness - lastBestFitness)
+				if fitnessChange <= pga.config.ConvergenceTolerance {
+					convergenceCount++
+					if convergenceCount >= pga.config.ConvergenceStops {
+						// Fitness has not improved for ConvergenceStops generations
+						if callback != nil {
+							callback(generation, bestIndividual) // Final callback
+						}
+						break
+					}
+				} else {
+					// Fitness improved significantly, reset counter
+					convergenceCount = 0
+				}
+			}
+			lastBestFitness = bestFitness
 		}
 
 		// Call callback if provided

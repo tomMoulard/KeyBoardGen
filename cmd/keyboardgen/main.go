@@ -34,6 +34,9 @@ type Config struct {
 	Verbose        bool    `json:"verbose"`
 	ShowProgress   bool    `json:"show_progress"`
 	SaveInterval   int     `json:"save_interval"`
+	// Convergence-based stopping
+	ConvergenceStops     int     `json:"convergence_stops"`
+	ConvergenceTolerance float64 `json:"convergence_tolerance"`
 }
 
 // DefaultAppConfig returns default application configuration.
@@ -51,6 +54,9 @@ func DefaultAppConfig() Config {
 		Verbose:        false,
 		ShowProgress:   true,
 		SaveInterval:   50,
+		// Convergence defaults
+		ConvergenceStops:     0,        // Disabled by default
+		ConvergenceTolerance: 0.000001, // Very small tolerance
 	}
 }
 
@@ -117,6 +123,8 @@ func parseFlags() Config {
 	flag.BoolVar(&config.Verbose, "verbose", config.Verbose, "Verbose output")
 	flag.BoolVar(&config.ShowProgress, "progress", config.ShowProgress, "Show progress")
 	flag.IntVar(&config.SaveInterval, "save-interval", config.SaveInterval, "Save best layout every N generations")
+	flag.IntVar(&config.ConvergenceStops, "convergence-stops", config.ConvergenceStops, "Stop after N generations with same fitness (0=disabled, overrides max generations)")
+	flag.Float64Var(&config.ConvergenceTolerance, "convergence-tolerance", config.ConvergenceTolerance, "Fitness difference tolerance for convergence detection")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "KeyBoardGen - Genetic Algorithm Keyboard Layout Optimizer\n\n")
@@ -156,8 +164,20 @@ func validateConfig(config Config) error {
 		return errors.New("population size must be at least 10")
 	}
 
-	if config.MaxGeneration < 1 {
-		return errors.New("max generations must be at least 1")
+	if config.MaxGeneration < 0 {
+		return errors.New("max generations must be non-negative (0 = unlimited with convergence)")
+	}
+
+	if config.MaxGeneration == 0 && config.ConvergenceStops == 0 {
+		return errors.New("either max generations or convergence stops must be set (not both zero)")
+	}
+
+	if config.ConvergenceStops < 0 {
+		return errors.New("convergence stops must be non-negative")
+	}
+
+	if config.ConvergenceTolerance < 0 {
+		return errors.New("convergence tolerance must be non-negative")
 	}
 
 	if config.MutationRate < 0 || config.MutationRate > 1 {
@@ -237,22 +257,42 @@ func runGA(ctx context.Context, appConfig Config) error {
 	// Set up genetic algorithm with adaptive configuration
 	var gaConfig genetic.Config
 
-	// Use adaptive configuration if user hasn't specified custom parameters
-	if appConfig.PopulationSize == 100 && appConfig.MaxGeneration == 1000 &&
-		appConfig.MutationRate == 0.1 && appConfig.CrossoverRate == 0.8 && appConfig.ElitismCount == 5 {
-		// User is using defaults, apply adaptive configuration
+	// Use adaptive configuration if user hasn't specified custom parameters (excluding convergence settings)
+	// Allow adaptive config when only convergence parameters or generations are customized
+	isUsingDefaults := (appConfig.PopulationSize == 100 &&
+		appConfig.MutationRate == 0.1 && appConfig.CrossoverRate == 0.8 && appConfig.ElitismCount == 5)
+
+	if isUsingDefaults {
+		// User is using defaults (convergence/generation settings don't count), apply adaptive configuration
 		gaConfig = genetic.AdaptiveConfig(keyloggerData.TotalChars)
+
+		// Override with user's convergence settings if provided
+		if appConfig.ConvergenceStops > 0 {
+			gaConfig.ConvergenceStops = appConfig.ConvergenceStops
+		}
+		if appConfig.ConvergenceTolerance != 0.000001 { // Non-default tolerance
+			gaConfig.ConvergenceTolerance = appConfig.ConvergenceTolerance
+		}
+		if appConfig.MaxGeneration == 0 { // User wants unlimited generations
+			gaConfig.MaxGenerations = 0
+		}
+
 		fmt.Printf("Using adaptive configuration for dataset size: %d characters\n", keyloggerData.TotalChars)
+		if appConfig.ConvergenceStops > 0 {
+			fmt.Printf("with convergence stopping after %d stagnant generations\n", appConfig.ConvergenceStops)
+		}
 	} else {
 		// User has customized parameters, respect their choices
 		gaConfig = genetic.Config{
-			PopulationSize:  appConfig.PopulationSize,
-			MaxGenerations:  appConfig.MaxGeneration,
-			MutationRate:    appConfig.MutationRate,
-			CrossoverRate:   appConfig.CrossoverRate,
-			ElitismCount:    appConfig.ElitismCount,
-			TournamentSize:  3,
-			ParallelWorkers: appConfig.WorkerCount,
+			PopulationSize:       appConfig.PopulationSize,
+			MaxGenerations:       appConfig.MaxGeneration,
+			MutationRate:         appConfig.MutationRate,
+			CrossoverRate:        appConfig.CrossoverRate,
+			ElitismCount:         appConfig.ElitismCount,
+			TournamentSize:       3,
+			ParallelWorkers:      appConfig.WorkerCount,
+			ConvergenceStops:     appConfig.ConvergenceStops,
+			ConvergenceTolerance: appConfig.ConvergenceTolerance,
 		}
 
 		fmt.Println("Using custom configuration")
@@ -262,7 +302,15 @@ func runGA(ctx context.Context, appConfig Config) error {
 
 	fmt.Printf("Starting genetic algorithm with:\n")
 	fmt.Printf("- Population size: %d\n", gaConfig.PopulationSize)
-	fmt.Printf("- Max generations: %d\n", gaConfig.MaxGenerations)
+	if gaConfig.MaxGenerations > 0 {
+		fmt.Printf("- Max generations: %d\n", gaConfig.MaxGenerations)
+	} else {
+		fmt.Printf("- Max generations: unlimited (convergence-based)\n")
+	}
+	if gaConfig.ConvergenceStops > 0 {
+		fmt.Printf("- Convergence stops: %d (after %d generations with same fitness)\n", gaConfig.ConvergenceStops, gaConfig.ConvergenceStops)
+		fmt.Printf("- Convergence tolerance: %.6f\n", gaConfig.ConvergenceTolerance)
+	}
 	fmt.Printf("- Mutation rate: %.2f\n", gaConfig.MutationRate)
 	fmt.Printf("- Crossover rate: %.2f\n", gaConfig.CrossoverRate)
 	fmt.Printf("- Elite count: %d\n", gaConfig.ElitismCount)
@@ -274,15 +322,30 @@ func runGA(ctx context.Context, appConfig Config) error {
 
 	var lastSavedGeneration int
 
+	// Fitness history for convergence chart
+	var fitnessHistory []float64
+
 	// Run genetic algorithm
 	bestIndividual, err := ga.Run(ctx, keyloggerData, func(generation int, best genetic.Individual) {
+		// Track fitness history for convergence chart
+		fitnessHistory = append(fitnessHistory, best.Fitness)
+
 		if appConfig.ShowProgress {
 			elapsed := time.Since(startTime)
-			avgTime := elapsed / time.Duration(generation+1)
-			remaining := avgTime * time.Duration(gaConfig.MaxGenerations-generation-1)
-
-			fmt.Printf("Generation %4d: Best fitness = %.6f (ETA: %v)\n",
-				generation, best.Fitness, remaining.Round(time.Second))
+			if gaConfig.MaxGenerations > 0 {
+				avgTime := elapsed / time.Duration(generation+1)
+				remaining := avgTime * time.Duration(gaConfig.MaxGenerations-generation-1)
+				fmt.Printf("Generation %4d: Best fitness = %.6f (ETA: %v)\n",
+					generation, best.Fitness, remaining.Round(time.Second))
+			} else {
+				// Convergence mode - show more detail for debugging
+				fitnessChange := 0.0
+				if len(fitnessHistory) > 1 {
+					fitnessChange = best.Fitness - fitnessHistory[len(fitnessHistory)-2]
+				}
+				fmt.Printf("Generation %4d: Best fitness = %.6f (Δ%.6f, elapsed: %v)\n",
+					generation, best.Fitness, fitnessChange, elapsed.Round(time.Second))
+			}
 		}
 
 		// Save intermediate results
@@ -301,6 +364,9 @@ func runGA(ctx context.Context, appConfig Config) error {
 	fmt.Printf("\nOptimization complete!\n")
 	fmt.Printf("Best fitness: %.6f\n", bestIndividual.Fitness)
 	fmt.Printf("Total time: %v\n", time.Since(startTime).Round(time.Second))
+
+	// Display fitness convergence chart
+	printFitnessConvergenceChart(fitnessHistory, gaConfig.ConvergenceStops > 0)
 
 	// Create display handler
 	kbDisplay := display.NewKeyboardDisplay()
@@ -418,4 +484,179 @@ func saveLayout(individual genetic.Individual, filename string) error {
 
 	// Write to file
 	return os.WriteFile(filename, buf.Bytes(), 0o644)
+}
+
+// printFitnessConvergenceChart displays an ASCII chart showing fitness convergence over generations.
+func printFitnessConvergenceChart(fitnessHistory []float64, isConvergenceMode bool) {
+	if len(fitnessHistory) < 2 {
+		return
+	}
+
+	fmt.Printf("\n╔═══════════════════════════════════════════════════════════════════╗\n")
+	if isConvergenceMode {
+		fmt.Printf("║                    FITNESS CONVERGENCE CHART                     ║\n")
+	} else {
+		fmt.Printf("║                      FITNESS EVOLUTION CHART                     ║\n")
+	}
+	fmt.Printf("╚═══════════════════════════════════════════════════════════════════╝\n\n")
+
+	// Find min and max fitness for scaling
+	minFitness := fitnessHistory[0]
+	maxFitness := fitnessHistory[0]
+	for _, fitness := range fitnessHistory {
+		if fitness < minFitness {
+			minFitness = fitness
+		}
+		if fitness > maxFitness {
+			maxFitness = fitness
+		}
+	}
+
+	// Chart dimensions
+	const chartHeight = 20
+	const chartWidth = 60
+
+	// Calculate improvement percentage
+	totalImprovement := 0.0
+	if maxFitness > minFitness {
+		totalImprovement = ((maxFitness - minFitness) / minFitness) * 100
+	}
+
+	// Scale fitness values to chart height
+	scaleFitness := func(fitness float64) int {
+		if maxFitness == minFitness {
+			return chartHeight / 2
+		}
+		scaled := int((fitness - minFitness) / (maxFitness - minFitness) * float64(chartHeight-1))
+		return chartHeight - 1 - scaled // Flip for display (higher values at top)
+	}
+
+	// Group generations for display (subsample if too many generations)
+	step := 1
+	if len(fitnessHistory) > chartWidth {
+		step = len(fitnessHistory) / chartWidth
+	}
+
+	// Create the chart
+	chart := make([][]rune, chartHeight)
+	for i := range chart {
+		chart[i] = make([]rune, chartWidth)
+		for j := range chart[i] {
+			chart[i][j] = ' '
+		}
+	}
+
+	// Plot the fitness line
+	for i := 0; i < chartWidth && i*step < len(fitnessHistory); i++ {
+		fitnessIdx := i * step
+		if fitnessIdx >= len(fitnessHistory) {
+			fitnessIdx = len(fitnessHistory) - 1
+		}
+
+		row := scaleFitness(fitnessHistory[fitnessIdx])
+		if row >= 0 && row < chartHeight {
+			chart[row][i] = '█'
+
+			// Add gradient effect with dots for smoother visualization
+			if i > 0 && i-1 < chartWidth {
+				prevIdx := (i - 1) * step
+				if prevIdx < len(fitnessHistory) {
+					prevRow := scaleFitness(fitnessHistory[prevIdx])
+					// Fill between current and previous points
+					startRow, endRow := prevRow, row
+					if startRow > endRow {
+						startRow, endRow = endRow, startRow
+					}
+					for r := startRow; r <= endRow; r++ {
+						if r >= 0 && r < chartHeight && chart[r][i] == ' ' {
+							chart[r][i] = '▓'
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Display the chart with Y-axis labels
+	fmt.Printf("Fitness\n")
+	for i := 0; i < chartHeight; i++ {
+		// Calculate the fitness value for this row
+		rowFitness := minFitness + (maxFitness-minFitness)*float64(chartHeight-1-i)/float64(chartHeight-1)
+		fmt.Printf("%7.4f │", rowFitness)
+
+		for j := 0; j < chartWidth; j++ {
+			fmt.Printf("%c", chart[i][j])
+		}
+		fmt.Printf("│\n")
+	}
+
+	// X-axis
+	fmt.Printf("        └")
+	for i := 0; i < chartWidth; i++ {
+		fmt.Printf("─")
+	}
+	fmt.Printf("┘\n")
+
+	// Generation markers
+	fmt.Printf("         ")
+	for i := 0; i < chartWidth; i += 10 {
+		gen := i * step
+		if gen < len(fitnessHistory) {
+			genStr := fmt.Sprintf("%d", gen)
+			for j, r := range genStr {
+				if i+j < chartWidth {
+					fmt.Printf("%c", r)
+				}
+			}
+			// Fill remaining space to next marker
+			for j := len(genStr); j < 10 && i+j < chartWidth; j++ {
+				fmt.Printf(" ")
+			}
+		}
+	}
+	fmt.Printf("\n         Generation\n\n")
+
+	// Summary statistics
+	fmt.Printf("\033[1;36mCONVERGENCE SUMMARY:\033[0m\n")
+	fmt.Printf("   * Total generations: %d\n", len(fitnessHistory))
+	fmt.Printf("   * Starting fitness: %.6f\n", fitnessHistory[0])
+	fmt.Printf("   * Final fitness: %.6f\n", fitnessHistory[len(fitnessHistory)-1])
+	fmt.Printf("   * Best fitness: %.6f\n", maxFitness)
+	fmt.Printf("   * Total improvement: %.2f%%\n", totalImprovement)
+
+	// Find convergence point if in convergence mode
+	if isConvergenceMode && len(fitnessHistory) > 10 {
+		// Look for when fitness stopped improving significantly
+		const convergenceWindow = 5
+		convergenceGen := -1
+
+		for i := convergenceWindow; i < len(fitnessHistory); i++ {
+			isConverged := true
+			for j := 1; j <= convergenceWindow; j++ {
+				if abs(fitnessHistory[i]-fitnessHistory[i-j]) > 0.000001 {
+					isConverged = false
+					break
+				}
+			}
+			if isConverged {
+				convergenceGen = i
+				break
+			}
+		}
+
+		if convergenceGen > 0 {
+			fmt.Printf("   * Converged at generation: %d\n", convergenceGen)
+			fmt.Printf("   * Convergence fitness: %.6f\n", fitnessHistory[convergenceGen])
+		}
+	}
+
+	fmt.Println()
+}
+
+// abs returns the absolute value of a float64.
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
