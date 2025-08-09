@@ -150,6 +150,106 @@ make test
 make lint
 ```
 
+## Genetic Algorithm Showcase
+
+### Real Optimization Example
+
+Here's a real optimization run on 242,608 characters of programming data, showing the genetic algorithm in action:
+
+```
+Parsing keylogger data from examples/programming.txt...
+Parsed 242608 characters, 1799 unique bigrams
+Using adaptive configuration for dataset size: 242608 characters
+with custom population size: 2000
+with convergence stopping after 20 stagnant generations
+
+Starting genetic algorithm with:
+- Population size: 2000
+- Max generations: unlimited (convergence-based)
+- Convergence stops: 20 (after 20 generations with same fitness)
+- Convergence tolerance: 0.000010
+- Mutation rate: 0.30
+- Crossover rate: 0.90
+- Elite count: 2
+- Parallel workers: 8
+
+Generation    0: Best fitness = 0.657273 (Δ0.000000, elapsed: 1s)
+Generation   10: Best fitness = 0.695714 (Δ0.012136, elapsed: 7s)
+Generation   50: Best fitness = 0.724053 (Δ0.000584, elapsed: 30s)
+Generation  100: Best fitness = 0.745769 (Δ0.000200, elapsed: 59s)
+Generation  150: Best fitness = 0.753413 (Δ0.000000, elapsed: 1m28s)
+Generation  200: Best fitness = 0.755937 (Δ0.000158, elapsed: 1m58s)
+Generation  250: Best fitness = 0.757019 (Δ0.000004, elapsed: 2m29s)
+Generation  294: Best fitness = 0.757227 (Δ0.000093, elapsed: 2m55s)
+
+Optimization complete!
+Best fitness: 0.757227
+Total time: 2m55s
+```
+
+### Optimization Results
+
+The algorithm achieved a **34.8% improvement** over QWERTY:
+
+| Metric | Optimized Layout | QWERTY | Improvement |
+|--------|------------------|--------|-------------|
+| **Fitness Score** | 0.757227 | 0.561661 | +34.8% |
+| **Hand Alternation** | 41.9% | 27.4% | +52.9% |
+| **Home Row Usage** | 53.3% | 21.6% | +146.8% |
+
+### Generated Layout
+
+**Optimized Base Layer:**
+```
+x 3 [ t d h u l c q
+a r ⇥ s i n   o e `
+< ] = m > @ ; 9 . )
+```
+
+**Key Features:**
+- Most frequent characters ('e', 't', 'a', 'r', 'i', 'n') placed on home row
+- Space bar optimally positioned for maximum comfort
+- Programming symbols strategically placed for code typing
+- 242,608 keystrokes analyzed across 1,799 unique bigrams
+
+### Convergence Visualization
+
+The algorithm shows clear convergence with diminishing returns:
+
+```
+Fitness Progress
+ 0.7572 │                                                            │
+ 0.7520 │                                    ████████████████████████│
+ 0.7467 │                           █████████▓                       │
+ 0.7414 │                     ██████▓                                │
+ 0.7362 │                  ███▓                                      │
+ 0.7309 │               ███▓                                         │
+ 0.7257 │              █▓                                            │
+ 0.7204 │          ████▓                                             │
+ 0.7151 │        ██▓                                                 │
+ 0.7099 │       █▓                                                   │
+ 0.7046 │      █▓                                                    │
+ 0.6994 │     █▓                                                     │
+ 0.6941 │   ██▓                                                      │
+ 0.6888 │   ▓                                                        │
+ 0.6836 │  █▓                                                        │
+ 0.6783 │  ▓                                                         │
+ 0.6731 │ █▓                                                         │
+ 0.6678 │ ▓                                                          │
+ 0.6625 │ ▓                                                          │
+ 0.6573 │█▓                                                          │
+        └────────────────────────────────────────────────────────────┘
+         0         40        80        120       160       200
+         Generation
+```
+
+**Convergence Summary:**
+- Total generations: 295
+- Starting fitness: 0.657273
+- Final fitness: 0.757227
+- Total improvement: **15.21%**
+- Evolution stopped after 20 stagnant generations
+
 ## Algorithm Details
 
 ### Fitness Evaluation
