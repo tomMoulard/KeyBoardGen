@@ -1159,38 +1159,120 @@ if __name__ == "__main__":
                 });
             }
 
-            async loadWasm() {
+            async loadWasm(retryCount = 0) {
+                const maxRetries = 2;
                 this.loadingIndicator.classList.remove('hidden');
+                
+                if (retryCount === 0) {
+                    this.addLogEntry("Starting WASM module initialization...", "info");
+                } else {
+                    this.addLogEntry(`Retrying WASM load (attempt ${retryCount + 1}/${maxRetries + 1})...`, "warning");
+                }
 
                 try {
+                    // Initialize Go runtime
                     const go = new Go();
-                    const result = await WebAssembly.instantiateStreaming(fetch("keyboardgen.wasm"), go.importObject);
-                    go.run(result.instance);
+                    
+                    // Fetch and instantiate WASM with timeout
+                    this.addLogEntry("Downloading WASM module...", "info");
+                    const wasmResponse = await this.fetchWithTimeout("keyboardgen.wasm", 30000);
+                    
+                    if (!wasmResponse.ok) {
+                        throw new Error(`Failed to fetch WASM: ${wasmResponse.status} ${wasmResponse.statusText}`);
+                    }
+                    
+                    this.addLogEntry("Instantiating WASM module...", "info");
+                    let result;
+                    try {
+                        result = await WebAssembly.instantiateStreaming(wasmResponse, go.importObject);
+                    } catch (streamError) {
+                        // Fallback to manual instantiation for older browsers
+                        this.addLogEntry("Streaming instantiation failed, trying fallback...", "warning");
+                        const wasmBytes = await wasmResponse.arrayBuffer();
+                        result = await WebAssembly.instantiate(wasmBytes, go.importObject);
+                    }
+                    
+                    // Run the Go program asynchronously
+                    this.addLogEntry("Starting Go runtime...", "info");
+                    
+                    // Run Go program in next tick to avoid blocking
+                    setTimeout(() => go.run(result.instance), 0);
 
-                    // Wait for WASM functions to be available
+                    // Wait for WASM functions to be available with timeout
+                    this.addLogEntry("Waiting for WASM functions to be available...", "info");
                     await this.waitForWasmFunctions();
 
+                    // Load default configuration
+                    this.addLogEntry("Loading default configuration...", "info");
                     this.wasmReady = true;
                     this.loadDefaultConfig();
                     this.updateButtonStates();
+                    
+                    // Success
                     this.loadingIndicator.classList.add('hidden');
                     this.updateStatus("✅ WASM module loaded successfully. Ready to optimize!");
                     this.addLogEntry("WASM module loaded successfully", "success");
+                    
                 } catch (error) {
                     console.error('Failed to load WASM:', error);
+                    
+                    // Retry logic
+                    if (retryCount < maxRetries && !error.message.includes('timeout')) {
+                        this.addLogEntry(`Load failed: ${error.message}. Retrying in 2 seconds...`, "warning");
+                        setTimeout(() => this.loadWasm(retryCount + 1), 2000);
+                        return;
+                    }
+                    
+                    // Final failure
                     this.loadingIndicator.classList.add('hidden');
                     this.updateStatus(`❌ Failed to load WASM module: ${error.message}`, 'error');
                     this.addLogEntry(`Failed to load WASM module: ${error.message}`, "error");
+                    
+                    // Provide helpful error information
+                    if (error.name === 'TypeError') {
+                        this.addLogEntry("This might be a network issue or the WASM file is missing", "error");
+                    } else if (error.message.includes('timeout')) {
+                        this.addLogEntry("Loading timed out - please check your connection and try refreshing", "error");
+                    } else if (error.message.includes('WebAssembly')) {
+                        this.addLogEntry("Your browser might not support WebAssembly or the WASM file is corrupted", "error");
+                    }
+                    
+                    this.addLogEntry("Please refresh the page to try again", "info");
+                }
+            }
+
+            async fetchWithTimeout(url, timeout = 30000) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                try {
+                    const response = await fetch(url, { 
+                        signal: controller.signal,
+                        cache: 'default' // Allow caching for better performance
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new Error(`Request timeout after ${timeout}ms`);
+                    }
+                    throw error;
                 }
             }
 
             async waitForWasmFunctions() {
-                return new Promise((resolve) => {
+                const timeout = 10000; // 10 second timeout
+                const startTime = Date.now();
+                
+                return new Promise((resolve, reject) => {
                     const checkFunctions = () => {
                         if (window.getDefaultConfig && window.validateConfig && window.optimizeKeyboard) {
                             resolve();
+                        } else if (Date.now() - startTime > timeout) {
+                            reject(new Error('Timeout waiting for WASM functions to be available'));
                         } else {
-                            setTimeout(checkFunctions, 100);
+                            setTimeout(checkFunctions, 50); // Check more frequently
                         }
                     };
                     checkFunctions();
