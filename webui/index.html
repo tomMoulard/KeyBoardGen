@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyboardGen - Genetic Algorithm Keyboard Layout Optimizer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .range-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-group input[type="range"] {
+            flex: 1;
+        }
+
+        .range-value {
+            min-width: 60px;
+            text-align: center;
+            background: #f7fafc;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #cbd5e0;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            grid-column: 1 / -1;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .progress-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .progress-item .label {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+
+        .progress-item .value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .keyboard-layout {
+            background: #2d3748;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .keyboard-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+
+        .key {
+            min-width: 40px;
+            height: 40px;
+            background: #4a5568;
+            border: 2px solid #718096;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .key.optimized {
+            background: #667eea;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .fitness-chart {
+            height: 300px;
+            background: #f7fafc;
+            border-radius: 10px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #f56565;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #48bb78;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .statistics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎹 KeyboardGen</h1>
+            <p>Genetic Algorithm Keyboard Layout Optimizer</p>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2>⚙️ Configuration</h2>
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="inputText">Input Text (for analysis):</label>
+                        <textarea id="inputText" placeholder="Enter your typing sample here... (e.g., your coding style, writing sample, etc.)" required></textarea>
+                        <small style="color: #718096;">Provide a representative sample of your typing patterns for optimal layout generation.</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="populationSize">Population Size:</label>
+                            <input type="number" id="populationSize" min="10" max="1000" value="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="maxGeneration">Max Generations:</label>
+                            <input type="number" id="maxGeneration" min="0" max="10000" value="1000">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mutationRate">Mutation Rate:</label>
+                            <div class="range-group">
+                                <input type="range" id="mutationRate" min="0" max="1" step="0.01" value="0.1">
+                                <span class="range-value" id="mutationRateValue">0.10</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="crossoverRate">Crossover Rate:</label>
+                            <div class="range-group">
+                                <input type="range" id="crossoverRate" min="0" max="1" step="0.01" value="0.8">
+                                <span class="range-value" id="crossoverRateValue">0.80</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="elitismCount">Elitism Count:</label>
+                            <input type="number" id="elitismCount" min="0" max="50" value="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="convergenceStops">Convergence Stops:</label>
+                            <input type="number" id="convergenceStops" min="0" max="1000" value="0">
+                            <small style="color: #718096;">0 = disabled</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="showProgress" checked>
+                            <label for="showProgress">Show Progress Updates</label>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary" id="optimizeBtn">
+                            🚀 Start Optimization
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="stopBtn" disabled>
+                            ⏹️ Stop
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📊 Current Status</h2>
+                <div id="statusContent">
+                    <p style="color: #718096; text-align: center; padding: 40px;">
+                        Configure your parameters and start optimization to see progress here.
+                    </p>
+                </div>
+
+                <div class="loading hidden" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Loading WASM module...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card results-section hidden" id="resultsSection">
+            <h2>🎯 Optimization Results</h2>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script src="wasm_exec.js"></script>
+    <script>
+        class KeyboardOptimizer {
+            constructor() {
+                this.wasmReady = false;
+                this.optimizing = false;
+                this.config = null;
+                this.parameterInfo = null;
+                this.initializeElements();
+                this.loadWasm();
+            }
+
+            initializeElements() {
+                this.form = document.getElementById('configForm');
+                this.optimizeBtn = document.getElementById('optimizeBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.statusContent = document.getElementById('statusContent');
+                this.resultsSection = document.getElementById('resultsSection');
+                this.resultsContent = document.getElementById('resultsContent');
+                this.loadingIndicator = document.getElementById('loadingIndicator');
+
+                // Bind events
+                this.form.addEventListener('submit', (e) => this.startOptimization(e));
+                this.stopBtn.addEventListener('click', () => this.stopOptimization());
+
+                // Range input handlers
+                document.getElementById('mutationRate').addEventListener('input', (e) => {
+                    document.getElementById('mutationRateValue').textContent = parseFloat(e.target.value).toFixed(2);
+                });
+
+                document.getElementById('crossoverRate').addEventListener('input', (e) => {
+                    document.getElementById('crossoverRateValue').textContent = parseFloat(e.target.value).toFixed(2);
+                });
+            }
+
+            async loadWasm() {
+                this.loadingIndicator.classList.remove('hidden');
+
+                try {
+                    const go = new Go();
+                    const result = await WebAssembly.instantiateStreaming(fetch("keyboardgen.wasm"), go.importObject);
+                    go.run(result.instance);
+
+                    // Wait for WASM functions to be available
+                    await this.waitForWasmFunctions();
+
+                    this.wasmReady = true;
+                    this.loadDefaultConfig();
+                    this.loadingIndicator.classList.add('hidden');
+                    this.updateStatus("✅ WASM module loaded successfully. Ready to optimize!");
+                } catch (error) {
+                    console.error('Failed to load WASM:', error);
+                    this.loadingIndicator.classList.add('hidden');
+                    this.updateStatus(`❌ Failed to load WASM module: ${error.message}`, 'error');
+                }
+            }
+
+            async waitForWasmFunctions() {
+                return new Promise((resolve) => {
+                    const checkFunctions = () => {
+                        if (window.getDefaultConfig && window.validateConfig && window.optimizeKeyboard) {
+                            resolve();
+                        } else {
+                            setTimeout(checkFunctions, 100);
+                        }
+                    };
+                    checkFunctions();
+                });
+            }
+
+            loadDefaultConfig() {
+                try {
+                    const defaultConfigJson = window.getDefaultConfig();
+                    this.config = JSON.parse(defaultConfigJson);
+
+                    // Load parameter info
+                    const paramInfoJson = window.getParameterInfo();
+                    this.parameterInfo = JSON.parse(paramInfoJson);
+
+                    this.populateForm();
+                } catch (error) {
+                    console.error('Failed to load default config:', error);
+                    this.updateStatus(`❌ Failed to load default configuration: ${error.message}`, 'error');
+                }
+            }
+
+            populateForm() {
+                // Set sample text
+                document.getElementById('inputText').value = `// Sample programming text for keyboard optimization
+function optimizeKeyboard(input, config) {
+    const population = initializePopulation(config.populationSize);
+    let bestFitness = 0;
+
+    for (let generation = 0; generation < config.maxGenerations; generation++) {
+        const parents = selectParents(population);
+        const offspring = crossover(parents, config.crossoverRate);
+        mutate(offspring, config.mutationRate);
+
+        population = selectSurvivors(population, offspring, config.elitismCount);
+        const currentBest = evaluateFitness(population);
+
+        if (currentBest.fitness > bestFitness) {
+            bestFitness = currentBest.fitness;
+            console.log(\`Generation \${generation}: New best fitness \${bestFitness}\`);
+        }
+    }
+
+    return getBestLayout(population);
+}`;
+
+                // Populate form fields with default values
+                if (this.config) {
+                    document.getElementById('populationSize').value = this.config.population_size;
+                    document.getElementById('maxGeneration').value = this.config.max_generation;
+                    document.getElementById('mutationRate').value = this.config.mutation_rate;
+                    document.getElementById('mutationRateValue').textContent = this.config.mutation_rate.toFixed(2);
+                    document.getElementById('crossoverRate').value = this.config.crossover_rate;
+                    document.getElementById('crossoverRateValue').textContent = this.config.crossover_rate.toFixed(2);
+                    document.getElementById('elitismCount').value = this.config.elitism_count;
+                    document.getElementById('convergenceStops').value = this.config.convergence_stops;
+                    document.getElementById('showProgress').checked = this.config.show_progress;
+                }
+            }
+
+            getFormConfig() {
+                return {
+                    input_text: document.getElementById('inputText').value,
+                    population_size: parseInt(document.getElementById('populationSize').value),
+                    max_generation: parseInt(document.getElementById('maxGeneration').value),
+                    mutation_rate: parseFloat(document.getElementById('mutationRate').value),
+                    crossover_rate: parseFloat(document.getElementById('crossoverRate').value),
+                    elitism_count: parseInt(document.getElementById('elitismCount').value),
+                    convergence_stops: parseInt(document.getElementById('convergenceStops').value),
+                    convergence_tolerance: 0.000001,
+                    worker_count: 1,
+                    verbose: false,
+                    show_progress: document.getElementById('showProgress').checked,
+                    save_interval: 50
+                };
+            }
+
+            validateForm() {
+                const config = this.getFormConfig();
+                const validation = window.validateConfig(JSON.stringify(config));
+
+                if (!validation.valid) {
+                    this.updateStatus(`❌ Configuration error: ${validation.error}`, 'error');
+                    return false;
+                }
+
+                return true;
+            }
+
+            startOptimization(e) {
+                e.preventDefault();
+
+                if (!this.wasmReady) {
+                    this.updateStatus('❌ WASM module not ready yet. Please wait...', 'error');
+                    return;
+                }
+
+                if (!this.validateForm()) {
+                    return;
+                }
+
+                this.optimizing = true;
+                this.optimizeBtn.disabled = true;
+                this.stopBtn.disabled = false;
+                this.resultsSection.classList.add('hidden');
+
+                const config = this.getFormConfig();
+
+                this.updateStatus('🚀 Starting optimization...', 'info');
+
+                // Set up callback for progress updates
+                window.keyboardOptimizationCallback = (type, data) => {
+                    if (type === 'progress') {
+                        this.handleProgress(JSON.parse(data));
+                    } else if (type === 'result') {
+                        this.handleResult(JSON.parse(data));
+                    }
+                };
+
+                try {
+                    const result = window.optimizeKeyboard(JSON.stringify(config), window.keyboardOptimizationCallback);
+                    console.log('Optimization started:', result);
+                } catch (error) {
+                    console.error('Optimization error:', error);
+                    this.updateStatus(`❌ Optimization failed: ${error.message}`, 'error');
+                    this.resetButtons();
+                }
+            }
+
+            stopOptimization() {
+                if (this.wasmReady && window.stopOptimization) {
+                    const result = window.stopOptimization();
+                    this.updateStatus(`⏹️ ${result}`, 'info');
+                }
+                this.resetButtons();
+            }
+
+            handleProgress(progress) {
+                const statusHtml = `
+                    <div class="progress-info">
+                        <div class="progress-item">
+                            <div class="label">Generation</div>
+                            <div class="value">${progress.generation}</div>
+                        </div>
+                        <div class="progress-item">
+                            <div class="label">Best Fitness</div>
+                            <div class="value">${progress.best_fitness.toFixed(6)}</div>
+                        </div>
+                        <div class="progress-item">
+                            <div class="label">Fitness Change</div>
+                            <div class="value">${progress.fitness_change ? progress.fitness_change.toFixed(6) : '0.000000'}</div>
+                        </div>
+                        <div class="progress-item">
+                            <div class="label">Elapsed Time</div>
+                            <div class="value">${progress.elapsed_time}</div>
+                        </div>
+                        ${progress.eta ? `
+                        <div class="progress-item">
+                            <div class="label">ETA</div>
+                            <div class="value">${progress.eta}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                this.statusContent.innerHTML = statusHtml;
+            }
+
+            handleResult(result) {
+                this.resetButtons();
+
+                if (!result.success) {
+                    this.updateStatus(`❌ Optimization failed: ${result.error}`, 'error');
+                    return;
+                }
+
+                this.updateStatus('✅ Optimization completed successfully!', 'success');
+                this.displayResults(result);
+            }
+
+            displayResults(result) {
+                const statistics = result.statistics;
+                const improvement = statistics.improvement_percentage ? statistics.improvement_percentage.toFixed(2) : 'N/A';
+
+                const resultsHtml = `
+                    <div class="statistics-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">${result.best_fitness.toFixed(6)}</div>
+                            <div class="stat-label">Best Fitness</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${statistics.generation_count}</div>
+                            <div class="stat-label">Generations</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${result.total_time}</div>
+                            <div class="stat-label">Total Time</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${improvement}%</div>
+                            <div class="stat-label">Improvement</div>
+                        </div>
+                    </div>
+
+                    <h3>🎹 Optimized Layout</h3>
+                    <div class="keyboard-layout">
+                        <div style="color: white; text-align: center; margin-bottom: 15px;">
+                            Layout String: <code style="background: rgba(255,255,255,0.1); padding: 5px; border-radius: 3px;">${result.layout}</code>
+                        </div>
+                        ${this.renderKeyboardLayout(result.layout)}
+                    </div>
+
+                    <h3>📈 Fitness Evolution</h3>
+                    <div class="fitness-chart">
+                        <canvas class="chart-canvas" id="fitnessChart"></canvas>
+                    </div>
+
+                    <details style="margin-top: 20px;">
+                        <summary style="cursor: pointer; padding: 10px; background: #f7fafc; border-radius: 5px;">
+                            <strong>🔍 Detailed Results (JSON)</strong>
+                        </summary>
+                        <pre style="background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; overflow-x: auto; margin-top: 10px; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre>
+                    </details>
+                `;
+
+                this.resultsContent.innerHTML = resultsHtml;
+                this.resultsSection.classList.remove('hidden');
+
+                // Draw fitness chart
+                this.drawFitnessChart(result.fitness_history);
+
+                // Scroll to results
+                this.resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            renderKeyboardLayout(layout) {
+                // Standard QWERTY key positions for visual representation
+                const keyboardRows = [
+                    { keys: '`1234567890-=', start: 0 },
+                    { keys: 'qwertyuiop[]\\', start: 13 },
+                    { keys: 'asdfghjkl;\'', start: 26 },
+                    { keys: 'zxcvbnm,./', start: 37 }
+                ];
+
+                let html = '';
+                let layoutIndex = 0;
+
+                keyboardRows.forEach(row => {
+                    html += '<div class="keyboard-row">';
+
+                    for (let i = 0; i < row.keys.length && layoutIndex < layout.length; i++) {
+                        const optimizedChar = layout[layoutIndex] || '';
+                        const originalChar = row.keys[i];
+                        const isOptimized = optimizedChar !== originalChar;
+
+                        html += `<div class="key ${isOptimized ? 'optimized' : ''}" title="Original: ${originalChar} → Optimized: ${optimizedChar}">
+                            ${this.escapeHtml(optimizedChar)}
+                        </div>`;
+                        layoutIndex++;
+                    }
+
+                    html += '</div>';
+                });
+
+                return html;
+            }
+
+            drawFitnessChart(fitnessHistory) {
+                const canvas = document.getElementById('fitnessChart');
+                if (!canvas || !fitnessHistory || fitnessHistory.length === 0) return;
+
+                const ctx = canvas.getContext('2d');
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+                const width = rect.width;
+                const height = rect.height;
+                const padding = 40;
+
+                // Clear canvas
+                ctx.fillStyle = '#f7fafc';
+                ctx.fillRect(0, 0, width, height);
+
+                if (fitnessHistory.length < 2) return;
+
+                // Find min/max values
+                const minFitness = Math.min(...fitnessHistory);
+                const maxFitness = Math.max(...fitnessHistory);
+                const fitnessRange = maxFitness - minFitness;
+
+                // Draw axes
+                ctx.strokeStyle = '#4a5568';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, height - padding);
+                ctx.lineTo(width - padding, height - padding);
+                ctx.stroke();
+
+                // Draw fitness line
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let i = 0; i < fitnessHistory.length; i++) {
+                    const x = padding + (i / (fitnessHistory.length - 1)) * (width - 2 * padding);
+                    const y = height - padding - ((fitnessHistory[i] - minFitness) / fitnessRange) * (height - 2 * padding);
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // Add labels
+                ctx.fillStyle = '#4a5568';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Generation', width / 2, height - 5);
+
+                ctx.save();
+                ctx.translate(15, height / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('Fitness', 0, 0);
+                ctx.restore();
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            updateStatus(message, type = 'info') {
+                const className = type === 'error' ? 'error-message' :
+                                type === 'success' ? 'success-message' : '';
+
+                this.statusContent.innerHTML = `<div class="${className}">${message}</div>`;
+            }
+
+            resetButtons() {
+                this.optimizing = false;
+                this.optimizeBtn.disabled = false;
+                this.stopBtn.disabled = true;
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new KeyboardOptimizer();
+        });
+    </script>
+</body>
+</html>

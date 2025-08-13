@@ -3,7 +3,7 @@
 BINARY_NAME := keyboardgen
 BUILD_DIR := ./build
 CMD_DIR := ./cmd/keyboardgen
-PKG_DIR := ./...
+PKG_DIR := ./pkg/...
 
 .DEFAULT_GOAL := all
 
@@ -12,6 +12,7 @@ all: deps test build lint
 build: deps
 	mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_DIR)
+	GOOS=js GOARCH=wasm go build -o $(BUILD_DIR)/$(BINARY_NAME).wasm $(CMD_DIR)wasm
 
 test:
 	go test -race -cover $(PKG_DIR)

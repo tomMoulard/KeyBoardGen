@@ -442,11 +442,12 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 
 	bestFitness := -1.0
 	bestInitialized := false
-	
+
 	// Convergence tracking
-	var lastBestFitness float64 = -1.0
+	lastBestFitness := -1.0
+
 	convergenceCount := 0
-	
+
 	// Determine loop limit: use MaxGenerations if > 0, otherwise unlimited (but with convergence)
 	maxGens := pga.config.MaxGenerations
 	if maxGens == 0 && pga.config.ConvergenceStops > 0 {
@@ -493,6 +494,7 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 						if callback != nil {
 							callback(generation, bestIndividual) // Final callback
 						}
+
 						break
 					}
 				} else {
@@ -500,6 +502,7 @@ func (pga *ParallelGA) Run(ctx context.Context, data KeyloggerDataInterface, cal
 					convergenceCount = 0
 				}
 			}
+
 			lastBestFitness = bestFitness
 		}
 

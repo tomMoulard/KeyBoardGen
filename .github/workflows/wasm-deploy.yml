@@ -1,0 +1,50 @@
+name: Build WASM and Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Build WASM
+        env:
+          GOOS: js
+          GOARCH: wasm
+        run: go build -o webui/keyboardgen.wasm ./cmd/keyboardgenwasm
+
+      - name: Copy Go WASM support files
+        # https://go.dev/wiki/WebAssembly#getting-started
+        run: cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" .
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: './webui'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
