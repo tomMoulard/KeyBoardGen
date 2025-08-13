@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Optimize your keyboard layout using genetic algorithms. Analyze typing patterns, generate personalized keyboard mappings, and improve typing efficiency with KeyboardGen.">
     <title>KeyboardGen - Genetic Algorithm Keyboard Layout Optimizer</title>
     <style>
         * {
@@ -146,6 +147,12 @@
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #718096;
+            opacity: 1;
         }
 
         .form-group input:focus,
@@ -372,7 +379,7 @@
 
         .progress-item .label {
             font-size: 0.9rem;
-            color: #718096;
+            color: #4a5568;
             margin-bottom: 5px;
         }
 
@@ -497,7 +504,7 @@
         }
 
         .stat-card .stat-label {
-            color: #718096;
+            color: #4a5568;
             font-size: 0.9rem;
         }
 
@@ -531,7 +538,7 @@
 
         .process-output summary small {
             margin-left: auto;
-            color: #718096;
+            color: #4a5568;
             font-style: italic;
         }
 
@@ -557,7 +564,7 @@
 
         .output-log:empty::before {
             content: "No output yet. Start optimization to see process details...";
-            color: #a0aec0;
+            color: #4a5568;
             font-style: italic;
         }
 
@@ -598,7 +605,7 @@
         }
 
         .log-timestamp {
-            color: #a0aec0;
+            color: #4a5568;
             font-size: 12px;
         }
 
@@ -866,7 +873,7 @@
             }
 
             .output-log:empty::before {
-                color: #718096;
+                color: #4a5568;
             }
 
             .log-entry.info {
@@ -886,7 +893,7 @@
             }
 
             .log-timestamp {
-                color: #718096;
+                color: #a0aec0;
             }
 
             .detailed-results summary {
@@ -935,7 +942,7 @@
 
                         <div id="manual-content" class="tab-content active">
                             <textarea id="inputText" placeholder="Enter your typing sample here... (e.g., your coding style, writing sample, etc.)"></textarea>
-                            <small style="color: #718096;">Provide a representative sample of your typing patterns for optimal layout generation.</small>
+                            <small style="color: #4a5568;">Provide a representative sample of your typing patterns for optimal layout generation.</small>
                         </div>
 
                         <div id="datasets-content" class="tab-content">
@@ -947,7 +954,7 @@
                                 <option value="code-python">Python Code Sample</option>
                                 <option value="code-javascript">JavaScript Code Sample</option>
                             </select>
-                            <small style="color: #718096;">Choose from popular text datasets for keyboard optimization.</small>
+                            <small style="color: #4a5568;">Choose from popular text datasets for keyboard optimization.</small>
                         </div>
 
                         <div id="url-content" class="tab-content">
@@ -958,7 +965,7 @@
                                 <button type="button" class="btn-fetch" id="fetchBtn">📥 Fetch</button>
                             </div>
                             <div id="fetchStatus" class="fetch-status"></div>
-                            <small style="color: #718096;">Fetch text content from any URL (supports plain text, HTML, and common document formats). Try the Harry Potter URL above!</small>
+                            <small style="color: #4a5568;">Fetch text content from any URL (supports plain text, HTML, and common document formats). Try the Harry Potter URL above!</small>
                         </div>
                     </div>
 
@@ -998,7 +1005,7 @@
                         <div class="form-group">
                             <label for="convergenceStops" title="Stop optimization early if no improvement is seen for this many generations. Saves time when the algorithm has converged. 0 = disabled, typical values: 50-200.">Convergence Stops:</label>
                             <input type="number" id="convergenceStops" min="0" max="1000" value="0">
-                            <small style="color: #718096;">0 = disabled</small>
+                            <small style="color: #4a5568;">0 = disabled</small>
                         </div>
                     </div>
 
