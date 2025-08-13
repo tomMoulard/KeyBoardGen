@@ -667,6 +667,200 @@
                 display: none;
             }
         }
+
+        /* Dark Theme Support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                color: #e2e8f0;
+                background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            }
+
+            .card {
+                background: #2d3748;
+                color: #e2e8f0;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+
+            .card h2 {
+                color: #e2e8f0;
+                border-bottom: 2px solid #4a5568;
+            }
+
+            .form-group label {
+                color: #e2e8f0;
+            }
+
+            .form-group label[title]:hover::after {
+                background: #1a202c;
+                color: #e2e8f0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+
+            .form-group label[title]:hover::before {
+                border-top-color: #1a202c;
+            }
+
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                background: #1a202c;
+                color: #e2e8f0;
+                border: 2px solid #4a5568;
+            }
+
+            .form-group input::placeholder,
+            .form-group textarea::placeholder {
+                color: #a0aec0;
+            }
+
+            .form-group input:focus,
+            .form-group textarea:focus,
+            .form-group select:focus {
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            }
+
+            .range-value {
+                background: #1a202c;
+                color: #667eea;
+            }
+
+            .input-tab {
+                background: #1a202c;
+                color: #a0aec0;
+            }
+
+            .input-tab.active {
+                background: #2d3748;
+                color: #667eea;
+                border-bottom: 2px solid #667eea;
+            }
+
+            .input-tab:hover:not(.active) {
+                background: #4a5568;
+            }
+
+            .btn-secondary {
+                background: #4a5568;
+                color: #e2e8f0;
+            }
+
+            .btn-secondary:hover:not(:disabled) {
+                background: #718096;
+            }
+
+            .fetch-status.success {
+                background: #22543d;
+                color: #c6f6d5;
+                border-left: 4px solid #48bb78;
+            }
+
+            .fetch-status.error {
+                background: #742a2a;
+                color: #fed7d7;
+                border-left: 4px solid #f56565;
+            }
+
+            .fetch-status.loading {
+                background: #2c5282;
+                color: #bee3f8;
+                border-left: 4px solid #4299e1;
+            }
+
+            .progress-bar {
+                background: #1a202c;
+            }
+
+            .progress-item {
+                background: #1a202c;
+                color: #e2e8f0;
+            }
+
+            .progress-item .label {
+                color: #a0aec0;
+            }
+
+            .progress-item .value {
+                color: #e2e8f0;
+            }
+
+            .fitness-chart {
+                background: #1a202c;
+            }
+
+            .error-message {
+                background: #742a2a;
+                color: #fed7d7;
+                border-left: 4px solid #f56565;
+            }
+
+            .success-message {
+                background: #22543d;
+                color: #c6f6d5;
+                border-left: 4px solid #48bb78;
+            }
+
+            .stat-card {
+                background: #1a202c;
+                color: #e2e8f0;
+            }
+
+            .stat-card .stat-label {
+                color: #a0aec0;
+            }
+
+            .process-output {
+                border: 1px solid #4a5568;
+                background: #1a202c;
+            }
+
+            .process-output summary {
+                background: #2d3748;
+                color: #e2e8f0;
+            }
+
+            .process-output summary:hover {
+                background: #4a5568;
+            }
+
+            .process-output[open] summary {
+                border-bottom: 1px solid #4a5568;
+            }
+
+            .process-output summary small {
+                color: #a0aec0;
+            }
+
+            .output-log {
+                background: #1a202c;
+                color: #e2e8f0;
+                border: 1px solid #2d3748;
+            }
+
+            .output-log:empty::before {
+                color: #718096;
+            }
+
+            .log-entry.info {
+                color: #90cdf4;
+            }
+
+            .log-entry.success {
+                color: #9ae6b4;
+            }
+
+            .log-entry.warning {
+                color: #fbd38d;
+            }
+
+            .log-entry.error {
+                color: #fc8181;
+            }
+
+            .log-timestamp {
+                color: #718096;
+            }
+        }
     </style>
 </head>
 <body>
