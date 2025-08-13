@@ -697,12 +697,12 @@
                         </div>
 
                         <div id="manual-content" class="tab-content active">
-                            <textarea id="inputText" placeholder="Enter your typing sample here... (e.g., your coding style, writing sample, etc.)" required></textarea>
+                            <textarea id="inputText" placeholder="Enter your typing sample here... (e.g., your coding style, writing sample, etc.)"></textarea>
                             <small style="color: #718096;">Provide a representative sample of your typing patterns for optimal layout generation.</small>
                         </div>
 
                         <div id="datasets-content" class="tab-content">
-                            <select id="datasetSelect" class="form-control">
+                            <select id="datasetSelect">
                                 <option value="">Select a pre-imported dataset...</option>
                                 <option value="harrypotter">Harry Potter (Complete Series)</option>
                                 <option value="shakespeare">Shakespeare (Complete Works)</option>
@@ -983,9 +983,6 @@ if __name__ == "__main__":
             }
 
             populateForm() {
-                // Set sample text
-                document.getElementById('inputText').value = fetch("index.html");
-
                 // Populate form fields with default values
                 if (this.config) {
                     document.getElementById('populationSize').value = this.config.population_size;
@@ -1552,11 +1549,6 @@ if __name__ == "__main__":
             updateButtonStates() {
                 this.optimizeBtn.disabled = this.optimizing || !this.wasmReady;
                 this.stopBtn.disabled = !this.optimizing;
-            }
-
-            resetButtons() {
-                this.optimizing = false;
-                this.updateButtonStates();
             }
 
             addLogEntry(message, type = 'info') {
