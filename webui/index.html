@@ -776,9 +776,6 @@
                         <button type="submit" class="btn btn-primary" id="optimizeBtn">
                             🚀 Start Optimization
                         </button>
-                        <button type="button" class="btn btn-secondary" id="stopBtn" disabled>
-                            ⏹️ Stop
-                        </button>
                     </div>
                 </form>
             </div>
@@ -799,7 +796,6 @@
                 <div class="loading hidden" id="optimizingIndicator">
                     <div class="spinner"></div>
                     <p>Optimization in progress...</p>
-                    <small style="color: #718096; margin-top: 10px; display: block;">Use the Stop button to cancel the current optimization</small>
                 </div>
 
                 <details class="process-output hidden" id="processOutput">
@@ -881,7 +877,6 @@ if __name__ == "__main__":
             initializeElements() {
                 this.form = document.getElementById('configForm');
                 this.optimizeBtn = document.getElementById('optimizeBtn');
-                this.stopBtn = document.getElementById('stopBtn');
                 this.statusContent = document.getElementById('statusContent');
                 this.resultsSection = document.getElementById('resultsSection');
                 this.resultsContent = document.getElementById('resultsContent');
@@ -901,7 +896,6 @@ if __name__ == "__main__":
 
                 // Bind events
                 this.form.addEventListener('submit', (e) => this.startOptimization(e));
-                this.stopBtn.addEventListener('click', () => this.stopOptimization());
                 this.clearLogBtn.addEventListener('click', () => this.clearLog());
                 this.copyLogBtn.addEventListener('click', () => this.copyLog());
 
@@ -1259,44 +1253,6 @@ if __name__ == "__main__":
                 }
             }
 
-            stopOptimization() {
-                if (!this.optimizing) {
-                    return;
-                }
-
-                // Clear progress timeout if it exists
-                if (this.progressTimeout) {
-                    clearTimeout(this.progressTimeout);
-                    this.progressTimeout = null;
-                }
-
-                this.addLogEntry("Stop requested by user", "warning");
-                this.updateStatus('⏹️ Stopping optimization...', 'info');
-
-                // Try to stop via WASM if available
-                if (this.wasmReady && window.stopOptimization) {
-                    try {
-                        const result = window.stopOptimization();
-                        this.addLogEntry(`WASM stop result: ${result}`, "warning");
-                    } catch (error) {
-                        console.error('Error stopping optimization:', error);
-                        this.addLogEntry(`Error calling WASM stop: ${error.message}`, "error");
-                    }
-                }
-
-                // Force stop after a short delay to ensure cleanup
-                setTimeout(() => {
-                    this.optimizing = false;
-                    this.updateButtonStates();
-
-                    // Hide spinner and show status
-                    this.optimizingIndicator.classList.add('hidden');
-                    this.statusContent.classList.remove('hidden');
-
-                    this.updateStatus('⏹️ Optimization stopped by user', 'info');
-                    this.addLogEntry("Optimization stopped", "warning");
-                }, 100);
-            }
 
             handleProgress(progress) {
                 // Clear progress timeout once we start receiving updates
@@ -1548,7 +1504,6 @@ if __name__ == "__main__":
 
             updateButtonStates() {
                 this.optimizeBtn.disabled = this.optimizing || !this.wasmReady;
-                this.stopBtn.disabled = !this.optimizing;
             }
 
             addLogEntry(message, type = 'info') {
