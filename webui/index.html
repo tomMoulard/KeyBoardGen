@@ -88,11 +88,19 @@
         }
 
         .card h2 {
-            color: #4a5568;
+            color: #2d3748;
             margin-bottom: 20px;
             font-size: 1.5rem;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 10px;
+        }
+
+        .card {
+            color: #2d3748;
+        }
+
+        small {
+            color: #2d3748;
         }
 
         .form-group {
@@ -203,7 +211,7 @@
             padding: 5px 10px;
             border-radius: 5px;
             font-weight: 600;
-            color: #667eea;
+            color: #4c51bf;
         }
 
         .input-tabs {
@@ -228,8 +236,8 @@
 
         .input-tab.active {
             background: white;
-            color: #667eea;
-            border-bottom: 2px solid #667eea;
+            color: #4c51bf;
+            border-bottom: 2px solid #4c51bf;
         }
 
         .input-tab:hover:not(.active) {
@@ -716,6 +724,10 @@
                 box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             }
 
+            small {
+                color: #cbd5e0;
+            }
+
             .card h2 {
                 color: #e2e8f0;
                 border-bottom: 2px solid #4a5568;
@@ -757,7 +769,7 @@
 
             .range-value {
                 background: #1a202c;
-                color: #667eea;
+                color: #90cdf4;
             }
 
             .input-tab {
@@ -767,8 +779,8 @@
 
             .input-tab.active {
                 background: #2d3748;
-                color: #667eea;
-                border-bottom: 2px solid #667eea;
+                color: #90cdf4;
+                border-bottom: 2px solid #90cdf4;
             }
 
             .input-tab:hover:not(.active) {
@@ -942,7 +954,7 @@
 
                         <div id="manual-content" class="tab-content active">
                             <textarea id="inputText" placeholder="Enter your typing sample here... (e.g., your coding style, writing sample, etc.)"></textarea>
-                            <small style="color: #4a5568;">Provide a representative sample of your typing patterns for optimal layout generation.</small>
+                            <small style="color: #2d3748;">Provide a representative sample of your typing patterns for optimal layout generation.</small>
                         </div>
 
                         <div id="datasets-content" class="tab-content">
@@ -954,7 +966,7 @@
                                 <option value="code-python">Python Code Sample</option>
                                 <option value="code-javascript">JavaScript Code Sample</option>
                             </select>
-                            <small style="color: #4a5568;">Choose from popular text datasets for keyboard optimization.</small>
+                            <small style="color: #2d3748;">Choose from popular text datasets for keyboard optimization.</small>
                         </div>
 
                         <div id="url-content" class="tab-content">
@@ -965,7 +977,7 @@
                                 <button type="button" class="btn-fetch" id="fetchBtn">📥 Fetch</button>
                             </div>
                             <div id="fetchStatus" class="fetch-status"></div>
-                            <small style="color: #4a5568;">Fetch text content from any URL (supports plain text, HTML, and common document formats). Try the Harry Potter URL above!</small>
+                            <small style="color: #2d3748;">Fetch text content from any URL (supports plain text, HTML, and common document formats). Try the Harry Potter URL above!</small>
                         </div>
                     </div>
 
@@ -1005,7 +1017,7 @@
                         <div class="form-group">
                             <label for="convergenceStops" title="Stop optimization early if no improvement is seen for this many generations. Saves time when the algorithm has converged. 0 = disabled, typical values: 50-200.">Convergence Stops:</label>
                             <input type="number" id="convergenceStops" min="0" max="1000" value="0">
-                            <small style="color: #4a5568;">0 = disabled</small>
+                            <small style="color: #2d3748;">0 = disabled</small>
                         </div>
                     </div>
 
