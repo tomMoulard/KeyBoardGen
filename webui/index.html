@@ -78,6 +78,38 @@
             margin-bottom: 5px;
             font-weight: 600;
             color: #2d3748;
+            position: relative;
+            cursor: help;
+        }
+
+        .form-group label[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: #2d3748;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 400;
+            white-space: nowrap;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            margin-bottom: 5px;
+            max-width: 300px;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        .form-group label[title]:hover::before {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            left: 15px;
+            border: 5px solid transparent;
+            border-top-color: #2d3748;
+            z-index: 1000;
         }
 
         .form-group input,
@@ -495,25 +527,25 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="populationSize">Population Size:</label>
+                            <label for="populationSize" title="Number of keyboard layouts in each generation. Larger populations explore more solutions but take longer to compute. Recommended: 50-200.">Population Size:</label>
                             <input type="number" id="populationSize" min="10" max="1000" value="100">
                         </div>
                         <div class="form-group">
-                            <label for="maxGeneration">Max Generations:</label>
+                            <label for="maxGeneration" title="Maximum number of evolution cycles. More generations allow for better optimization but take longer. The algorithm may stop early if convergence is reached.">Max Generations:</label>
                             <input type="number" id="maxGeneration" min="0" max="10000" value="1000">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="mutationRate">Mutation Rate:</label>
+                            <label for="mutationRate" title="Probability of random changes in keyboard layouts. Higher values increase exploration but may slow convergence. Typical range: 0.05-0.2.">Mutation Rate:</label>
                             <div class="range-group">
                                 <input type="range" id="mutationRate" min="0" max="1" step="0.01" value="0.1">
                                 <span class="range-value" id="mutationRateValue">0.10</span>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="crossoverRate">Crossover Rate:</label>
+                            <label for="crossoverRate" title="Probability of combining two parent layouts to create offspring. Higher values promote information sharing between good solutions. Typical range: 0.6-0.9.">Crossover Rate:</label>
                             <div class="range-group">
                                 <input type="range" id="crossoverRate" min="0" max="1" step="0.01" value="0.8">
                                 <span class="range-value" id="crossoverRateValue">0.80</span>
@@ -523,11 +555,11 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="elitismCount">Elitism Count:</label>
+                            <label for="elitismCount" title="Number of best layouts automatically preserved in each generation. Ensures good solutions aren't lost during evolution. Recommended: 2-10% of population size.">Elitism Count:</label>
                             <input type="number" id="elitismCount" min="0" max="50" value="5">
                         </div>
                         <div class="form-group">
-                            <label for="convergenceStops">Convergence Stops:</label>
+                            <label for="convergenceStops" title="Stop optimization early if no improvement is seen for this many generations. Saves time when the algorithm has converged. 0 = disabled, typical values: 50-200.">Convergence Stops:</label>
                             <input type="number" id="convergenceStops" min="0" max="1000" value="0">
                             <small style="color: #718096;">0 = disabled</small>
                         </div>
@@ -536,7 +568,7 @@
                     <div class="form-group">
                         <div class="checkbox-group">
                             <input type="checkbox" id="showProgress" checked>
-                            <label for="showProgress">Show Progress Updates</label>
+                            <label for="showProgress" title="Display real-time progress updates including generation count, fitness scores, and time estimates during optimization.">Show Progress Updates</label>
                         </div>
                     </div>
 
