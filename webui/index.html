@@ -684,27 +684,7 @@
 
             populateForm() {
                 // Set sample text
-                document.getElementById('inputText').value = `// Sample programming text for keyboard optimization
-function optimizeKeyboard(input, config) {
-    const population = initializePopulation(config.populationSize);
-    let bestFitness = 0;
-
-    for (let generation = 0; generation < config.maxGenerations; generation++) {
-        const parents = selectParents(population);
-        const offspring = crossover(parents, config.crossoverRate);
-        mutate(offspring, config.mutationRate);
-
-        population = selectSurvivors(population, offspring, config.elitismCount);
-        const currentBest = evaluateFitness(population);
-
-        if (currentBest.fitness > bestFitness) {
-            bestFitness = currentBest.fitness;
-            console.log(\`Generation \${generation}: New best fitness \${bestFitness}\`);
-        }
-    }
-
-    return getBestLayout(population);
-}`;
+                document.getElementById('inputText').value = fetch("index.html");
 
                 // Populate form fields with default values
                 if (this.config) {
