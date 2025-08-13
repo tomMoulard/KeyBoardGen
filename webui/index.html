@@ -511,6 +511,7 @@
 
                     this.wasmReady = true;
                     this.loadDefaultConfig();
+                    this.updateButtonStates();
                     this.loadingIndicator.classList.add('hidden');
                     this.updateStatus("✅ WASM module loaded successfully. Ready to optimize!");
                 } catch (error) {
@@ -629,9 +630,7 @@ function optimizeKeyboard(input, config) {
                 }
 
                 this.optimizing = true;
-                this.optimizeBtn.disabled = true;
-                this.stopBtn.disabled = false;
-                this.resultsSection.classList.add('hidden');
+                this.updateButtonStates();
 
                 const config = this.getFormConfig();
 
@@ -646,22 +645,38 @@ function optimizeKeyboard(input, config) {
                     }
                 };
 
+                this.resultsSection.classList.add('hidden');
+                
                 try {
                     const result = window.optimizeKeyboard(JSON.stringify(config), window.keyboardOptimizationCallback);
                     console.log('Optimization started:', result);
                 } catch (error) {
                     console.error('Optimization error:', error);
                     this.updateStatus(`❌ Optimization failed: ${error.message}`, 'error');
-                    this.resetButtons();
+                    this.optimizing = false;
+                    this.updateButtonStates();
                 }
             }
 
             stopOptimization() {
-                if (this.wasmReady && window.stopOptimization) {
-                    const result = window.stopOptimization();
-                    this.updateStatus(`⏹️ ${result}`, 'info');
+                if (!this.optimizing) {
+                    return;
                 }
-                this.resetButtons();
+                
+                if (this.wasmReady && window.stopOptimization) {
+                    try {
+                        const result = window.stopOptimization();
+                        this.updateStatus(`⏹️ ${result}`, 'info');
+                    } catch (error) {
+                        console.error('Error stopping optimization:', error);
+                        this.updateStatus(`⏹️ Stop requested (${error.message})`, 'info');
+                    }
+                } else {
+                    this.updateStatus('⏹️ Stop requested (optimization will complete current generation)', 'info');
+                }
+                
+                this.optimizing = false;
+                this.updateButtonStates();
             }
 
             handleProgress(progress) {
@@ -696,7 +711,8 @@ function optimizeKeyboard(input, config) {
             }
 
             handleResult(result) {
-                this.resetButtons();
+                this.optimizing = false;
+                this.updateButtonStates();
 
                 if (!result.success) {
                     this.updateStatus(`❌ Optimization failed: ${result.error}`, 'error');
@@ -871,10 +887,14 @@ function optimizeKeyboard(input, config) {
                 this.statusContent.innerHTML = `<div class="${className}">${message}</div>`;
             }
 
+            updateButtonStates() {
+                this.optimizeBtn.disabled = this.optimizing || !this.wasmReady;
+                this.stopBtn.disabled = !this.optimizing;
+            }
+
             resetButtons() {
                 this.optimizing = false;
-                this.optimizeBtn.disabled = false;
-                this.stopBtn.disabled = true;
+                this.updateButtonStates();
             }
         }
 
