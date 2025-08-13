@@ -873,7 +873,7 @@
                     📂 Repository
                 </a>
                 <a href="https://tom.moulard.org" target="_blank" rel="noopener noreferrer">
-                    👨‍💻 Author
+                    👨‍💻 Author: Tom Moulard
                 </a>
             </div>
         </div>
@@ -1025,8 +1025,8 @@
                 this.parameterInfo = null;
                 this.currentInputMethod = 'manual';
                 this.datasets = {
-                    'harrypotter': `https://api.allorigins.win/get?url=${encodeURIComponent('https://dgoldberg.sdsu.edu/515/harrypotter.txt')}`,
-                    'shakespeare': `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.gutenberg.org/files/100/100-0.txt')}`,
+                    'harrypotter': `https://api.allorigins.win/raw?url=${encodeURIComponent('https://dgoldberg.sdsu.edu/515/harrypotter.txt')}`,
+                    'shakespeare': `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.gutenberg.org/files/100/100-0.txt')}`,
                     'lorem': 'data:text/plain;base64,' + btoa('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.'),
                     'code-python': 'data:text/plain;base64,' + btoa(`def fibonacci(n):
     """Generate Fibonacci sequence up to n terms."""
@@ -1299,7 +1299,7 @@ if __name__ == "__main__":
                             const testResponse = await fetch(url, { method: 'HEAD' });
                         } catch (corsError) {
                             // If CORS fails, try with a simple CORS proxy
-                            fetchUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                            fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
                         }
                     }
 
