@@ -348,6 +348,107 @@
             font-size: 0.9rem;
         }
 
+        .process-output {
+            margin-top: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f7fafc;
+        }
+
+        .process-output summary {
+            padding: 15px;
+            cursor: pointer;
+            background: #edf2f7;
+            border-radius: 8px 8px 0 0;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background-color 0.2s ease;
+        }
+
+        .process-output summary:hover {
+            background: #e2e8f0;
+        }
+
+        .process-output[open] summary {
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .process-output summary small {
+            margin-left: auto;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .output-content {
+            padding: 15px;
+        }
+
+        .output-log {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0 0 15px 0;
+            border: 1px solid #4a5568;
+        }
+
+        .output-log:empty::before {
+            content: "No output yet. Start optimization to see process details...";
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        .output-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .output-icon {
+            font-size: 1.1em;
+        }
+
+        .log-entry {
+            margin-bottom: 2px;
+            padding: 2px 0;
+        }
+
+        .log-entry.info {
+            color: #63b3ed;
+        }
+
+        .log-entry.success {
+            color: #68d391;
+        }
+
+        .log-entry.warning {
+            color: #fbb965;
+        }
+
+        .log-entry.error {
+            color: #f56565;
+        }
+
+        .log-timestamp {
+            color: #a0aec0;
+            font-size: 12px;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -363,6 +464,14 @@
 
             .container {
                 padding: 10px;
+            }
+
+            .output-controls {
+                flex-direction: column;
+            }
+
+            .process-output summary small {
+                display: none;
             }
         }
     </style>
@@ -454,6 +563,21 @@
                     <div class="spinner"></div>
                     <p>Loading WASM module...</p>
                 </div>
+
+                <details class="process-output hidden" id="processOutput">
+                    <summary>
+                        <span class="output-icon">📋</span>
+                        <strong>Process Output</strong>
+                        <small>(Click to expand/collapse)</small>
+                    </summary>
+                    <div class="output-content">
+                        <pre id="outputLog" class="output-log"></pre>
+                        <div class="output-controls">
+                            <button type="button" class="btn btn-secondary btn-small" id="clearLogBtn">Clear Log</button>
+                            <button type="button" class="btn btn-secondary btn-small" id="copyLogBtn">Copy Log</button>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
 
@@ -483,10 +607,16 @@
                 this.resultsSection = document.getElementById('resultsSection');
                 this.resultsContent = document.getElementById('resultsContent');
                 this.loadingIndicator = document.getElementById('loadingIndicator');
+                this.processOutput = document.getElementById('processOutput');
+                this.outputLog = document.getElementById('outputLog');
+                this.clearLogBtn = document.getElementById('clearLogBtn');
+                this.copyLogBtn = document.getElementById('copyLogBtn');
 
                 // Bind events
                 this.form.addEventListener('submit', (e) => this.startOptimization(e));
                 this.stopBtn.addEventListener('click', () => this.stopOptimization());
+                this.clearLogBtn.addEventListener('click', () => this.clearLog());
+                this.copyLogBtn.addEventListener('click', () => this.copyLog());
 
                 // Range input handlers
                 document.getElementById('mutationRate').addEventListener('input', (e) => {
@@ -514,10 +644,12 @@
                     this.updateButtonStates();
                     this.loadingIndicator.classList.add('hidden');
                     this.updateStatus("✅ WASM module loaded successfully. Ready to optimize!");
+                    this.addLogEntry("WASM module loaded successfully", "success");
                 } catch (error) {
                     console.error('Failed to load WASM:', error);
                     this.loadingIndicator.classList.add('hidden');
                     this.updateStatus(`❌ Failed to load WASM module: ${error.message}`, 'error');
+                    this.addLogEntry(`Failed to load WASM module: ${error.message}`, "error");
                 }
             }
 
@@ -635,6 +767,8 @@ function optimizeKeyboard(input, config) {
                 const config = this.getFormConfig();
 
                 this.updateStatus('🚀 Starting optimization...', 'info');
+                this.addLogEntry("Starting keyboard layout optimization", "info");
+                this.addLogEntry(`Configuration: Population=${config.population_size}, Generations=${config.max_generation}, Mutation=${config.mutation_rate}, Crossover=${config.crossover_rate}`, "info");
 
                 // Set up callback for progress updates
                 window.keyboardOptimizationCallback = (type, data) => {
@@ -646,13 +780,15 @@ function optimizeKeyboard(input, config) {
                 };
 
                 this.resultsSection.classList.add('hidden');
-                
+
                 try {
                     const result = window.optimizeKeyboard(JSON.stringify(config), window.keyboardOptimizationCallback);
                     console.log('Optimization started:', result);
+                    this.addLogEntry(`Genetic algorithm initialized: ${result}`, "success");
                 } catch (error) {
                     console.error('Optimization error:', error);
                     this.updateStatus(`❌ Optimization failed: ${error.message}`, 'error');
+                    this.addLogEntry(`Optimization initialization failed: ${error.message}`, "error");
                     this.optimizing = false;
                     this.updateButtonStates();
                 }
@@ -662,19 +798,22 @@ function optimizeKeyboard(input, config) {
                 if (!this.optimizing) {
                     return;
                 }
-                
+
                 if (this.wasmReady && window.stopOptimization) {
                     try {
                         const result = window.stopOptimization();
                         this.updateStatus(`⏹️ ${result}`, 'info');
+                        this.addLogEntry(`Stop requested: ${result}`, "warning");
                     } catch (error) {
                         console.error('Error stopping optimization:', error);
                         this.updateStatus(`⏹️ Stop requested (${error.message})`, 'info');
+                        this.addLogEntry(`Stop requested but encountered error: ${error.message}`, "warning");
                     }
                 } else {
                     this.updateStatus('⏹️ Stop requested (optimization will complete current generation)', 'info');
+                    this.addLogEntry("Stop requested - optimization will complete current generation", "warning");
                 }
-                
+
                 this.optimizing = false;
                 this.updateButtonStates();
             }
@@ -708,6 +847,12 @@ function optimizeKeyboard(input, config) {
                 `;
 
                 this.statusContent.innerHTML = statusHtml;
+
+                // Add detailed log entry for significant progress milestones
+                if (progress.generation % 50 === 0 || (progress.fitness_change && progress.fitness_change > 0.001)) {
+                    const logMessage = `Generation ${progress.generation}: fitness=${progress.best_fitness.toFixed(6)}${progress.fitness_change ? `, change=${progress.fitness_change > 0 ? '+' : ''}${progress.fitness_change.toFixed(6)}` : ''}${progress.eta ? `, ETA=${progress.eta}` : ''}`;
+                    this.addLogEntry(logMessage, progress.fitness_change > 0 ? "success" : "info");
+                }
             }
 
             handleResult(result) {
@@ -716,10 +861,19 @@ function optimizeKeyboard(input, config) {
 
                 if (!result.success) {
                     this.updateStatus(`❌ Optimization failed: ${result.error}`, 'error');
+                    this.addLogEntry(`Optimization failed: ${result.error}`, "error");
                     return;
                 }
 
                 this.updateStatus('✅ Optimization completed successfully!', 'success');
+                this.addLogEntry(`Optimization completed successfully in ${result.total_time}`, "success");
+                this.addLogEntry(`Final fitness: ${result.best_fitness.toFixed(6)}`, "success");
+                this.addLogEntry(`Optimized layout: ${result.layout}`, "info");
+
+                if (result.statistics && result.statistics.improvement_percentage) {
+                    this.addLogEntry(`Performance improvement: ${result.statistics.improvement_percentage.toFixed(2)}%`, "success");
+                }
+
                 this.displayResults(result);
             }
 
@@ -895,6 +1049,38 @@ function optimizeKeyboard(input, config) {
             resetButtons() {
                 this.optimizing = false;
                 this.updateButtonStates();
+            }
+
+            addLogEntry(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
+
+                logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${this.escapeHtml(message)}`;
+
+                this.outputLog.appendChild(logEntry);
+                this.outputLog.scrollTop = this.outputLog.scrollHeight;
+
+                // Show the process output section if it's hidden
+                if (this.processOutput.classList.contains('hidden')) {
+                    this.processOutput.classList.remove('hidden');
+                }
+            }
+
+            clearLog() {
+                this.outputLog.innerHTML = '';
+                this.addLogEntry('Log cleared by user', 'info');
+            }
+
+            async copyLog() {
+                try {
+                    const logText = this.outputLog.textContent;
+                    await navigator.clipboard.writeText(logText);
+                    this.addLogEntry('Log copied to clipboard', 'success');
+                } catch (error) {
+                    console.error('Failed to copy log:', error);
+                    this.addLogEntry('Failed to copy log to clipboard', 'error');
+                }
             }
         }
 
