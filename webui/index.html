@@ -602,6 +602,34 @@
             font-size: 12px;
         }
 
+        .detailed-results {
+            margin-top: 20px;
+        }
+
+        .detailed-results summary {
+            cursor: pointer;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 5px;
+            user-select: none;
+        }
+
+        .detailed-results summary:hover {
+            background: #edf2f7;
+        }
+
+        .detailed-results pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-top: 10px;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -859,6 +887,21 @@
 
             .log-timestamp {
                 color: #718096;
+            }
+
+            .detailed-results summary {
+                background: #1a202c;
+                color: #e2e8f0;
+            }
+
+            .detailed-results summary:hover {
+                background: #2d3748;
+            }
+
+            .detailed-results pre {
+                background: #1a202c;
+                color: #e2e8f0;
+                border: 1px solid #2d3748;
             }
         }
     </style>
@@ -1575,11 +1618,11 @@ if __name__ == "__main__":
                         <canvas class="chart-canvas" id="fitnessChart"></canvas>
                     </div>
 
-                    <details style="margin-top: 20px;">
-                        <summary style="cursor: pointer; padding: 10px; background: #f7fafc; border-radius: 5px;">
+                    <details class="detailed-results">
+                        <summary>
                             <strong>🔍 Detailed Results (JSON)</strong>
                         </summary>
-                        <pre style="background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; overflow-x: auto; margin-top: 10px; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
                     </details>
                 `;
 
@@ -1639,8 +1682,11 @@ if __name__ == "__main__":
                 const height = rect.height;
                 const padding = 40;
 
-                // Clear canvas
-                ctx.fillStyle = '#f7fafc';
+                // Detect dark mode
+                const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                
+                // Clear canvas with appropriate background
+                ctx.fillStyle = isDarkMode ? '#1a202c' : '#f7fafc';
                 ctx.fillRect(0, 0, width, height);
 
                 if (fitnessHistory.length < 2) return;
@@ -1650,8 +1696,8 @@ if __name__ == "__main__":
                 const maxFitness = Math.max(...fitnessHistory);
                 const fitnessRange = maxFitness - minFitness;
 
-                // Draw axes
-                ctx.strokeStyle = '#4a5568';
+                // Draw axes with theme-appropriate colors
+                ctx.strokeStyle = isDarkMode ? '#718096' : '#4a5568';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(padding, padding);
@@ -1676,8 +1722,8 @@ if __name__ == "__main__":
                 }
                 ctx.stroke();
 
-                // Add labels
-                ctx.fillStyle = '#4a5568';
+                // Add labels with theme-appropriate colors
+                ctx.fillStyle = isDarkMode ? '#e2e8f0' : '#4a5568';
                 ctx.font = '12px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText('Generation', width / 2, height - 5);
